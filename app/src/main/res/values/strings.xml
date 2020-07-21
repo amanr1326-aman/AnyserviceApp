@@ -87,5 +87,11 @@
     <string name="cancel">Cancel</string>
     <string name="details">More Details...</string>
     <string name="call">&#xf2a0; Call</string>
+    <string name="pending">Previous Bill</string>
+    <string name="online">Show Available to Customers</string>
+    <string name="services">&#xf085;\n\n Services</string>
+    <string name="distance">&#xf70c;\n\n Service Radius</string>
+    <string name="accept">Accept</string>
+    <string name="change_price">Change Price</string>
 
 </resources>

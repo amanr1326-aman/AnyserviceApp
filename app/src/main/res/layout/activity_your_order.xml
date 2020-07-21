@@ -85,6 +85,27 @@
                     <TextView
                         style="@style/TextAppearance.AppCompat.Body1"
                         android:layout_width="0dp"
+                        android:text="@string/pending"
+                        android:layout_weight="4"
+                        android:layout_height="wrap_content"/>
+                    <androidx.appcompat.widget.AppCompatTextView
+                        android:id="@+id/pending"
+                        style="@style/TextAppearance.AppCompat.Body1"
+                        android:layout_width="0dp"
+                        android:layout_gravity="right"
+                        android:textColor="@color/common_google_signin_btn_text_light_pressed"
+                        android:drawableLeft="@drawable/ic_rupee_indian"
+                        android:layout_weight="1"
+                        android:layout_height="wrap_content"
+                        android:drawableStart="@drawable/ic_rupee_indian" />
+                </LinearLayout>
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal">
+                    <TextView
+                        style="@style/TextAppearance.AppCompat.Body1"
+                        android:layout_width="0dp"
                         android:text="@string/price"
                         android:layout_weight="4"
                         android:layout_height="wrap_content"/>

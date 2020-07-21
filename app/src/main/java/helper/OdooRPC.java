@@ -1,13 +1,8 @@
 package helper;
 
 import android.util.Log;
-
-import java.net.MalformedURLException;
 import java.net.URL;
-import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 
 import de.timroes.axmlrpc.XMLRPCCallback;
@@ -18,18 +13,21 @@ public class OdooRPC {
     String uid=null;
     String path = "http://192.168.0.15:8069",
             path2 = "http://192.168.43.240:8069",
+            path3 ="http://10.0.0.2:8069",
             db = "ANYSERVICE",
             username = "android",
             password = "@ndroid@1326";
     XMLRPCClient client, model;
     public OdooRPC(){
         try {
-            path=path2;
+//            path=path2;
+            path=path3;
             URL url1 =new URL(path+ "/xmlrpc/2/common");
             URL url2 =new URL(path+ "/xmlrpc/2/object");
             client = new XMLRPCClient(url1);
             model = new XMLRPCClient(url2);
         } catch (Exception e) {
+            e.printStackTrace();
         }
     }
 

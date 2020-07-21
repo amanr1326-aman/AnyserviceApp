@@ -3,6 +3,7 @@ package com.aryan.anyservice;
 import android.Manifest;
 import android.annotation.SuppressLint;
 import android.content.Context;
+import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
@@ -13,13 +14,8 @@ import android.os.AsyncTask;
 import android.os.Build;
 import android.os.Bundle;
 import android.util.Log;
-import android.view.Menu;
-import android.view.MenuInflater;
-import android.view.MenuItem;
-import android.view.MotionEvent;
 import android.view.View;
 import android.widget.ArrayAdapter;
-import android.widget.Button;
 import android.widget.ProgressBar;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -27,12 +23,9 @@ import android.widget.Toast;
 import com.google.android.gms.common.ConnectionResult;
 import com.google.android.gms.common.api.GoogleApiClient;
 import com.google.android.gms.location.LocationServices;
-import com.google.android.gms.tasks.OnCompleteListener;
-import com.google.android.gms.tasks.Task;
 import com.google.android.material.bottomnavigation.BottomNavigationView;
 
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
@@ -40,6 +33,7 @@ import java.util.Locale;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.ActionBar;
+import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.widget.AppCompatSpinner;
 import androidx.core.app.ActivityCompat;
@@ -54,7 +48,7 @@ public class HomeActivity extends AppCompatActivity {
     AppCompatSpinner locationSpinner;
     final int PLACE_AUTOCOMPLETE_REQUEST_CODE = 1011;
     GoogleApiClient googleApiClient;
-    boolean app_startup=true;
+    boolean app_startup = true;
     ProgressBar locationProgressBar;
     TextView refreshTextView;
 
@@ -63,6 +57,7 @@ public class HomeActivity extends AppCompatActivity {
     @Override
     public void onBackPressed() {
         moveTaskToBack(true);
+//        super.onBackPressed();
     }
 
     @Override
@@ -71,52 +66,60 @@ public class HomeActivity extends AppCompatActivity {
         setContentView(R.layout.activity_home);
 
         requestPermission();
-        updateLocation();
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            startForegroundService(new Intent(HomeActivity.this, NotifyService.class));
+        } else {
+            startService(new Intent(HomeActivity.this, NotifyService.class));
+        }
 
 
         ActionBar actionBar = getSupportActionBar();
-        actionBar.setDisplayShowCustomEnabled(true);
-        actionBar.setCustomView(R.layout.top_menu_layout);
-        actionBar.setDisplayOptions(ActionBar.DISPLAY_SHOW_CUSTOM
-                | ActionBar.DISPLAY_SHOW_HOME);
-        locationSpinner = actionBar.getCustomView().findViewById(R.id.location_spinner);
-        TextView profile = actionBar.getCustomView().findViewById(R.id.user_icon_textview);
-        refreshTextView = actionBar.getCustomView().findViewById(R.id.refresh_icon_textview);
-        locationProgressBar = actionBar.getCustomView().findViewById(R.id.refresh_progress);
+        if (actionBar != null) {
+            actionBar.setDisplayShowCustomEnabled(true);
+            actionBar.setCustomView(R.layout.top_menu_layout);
+            actionBar.setDisplayOptions(ActionBar.DISPLAY_SHOW_CUSTOM
+                    | ActionBar.DISPLAY_SHOW_HOME);
+            locationSpinner = actionBar.getCustomView().findViewById(R.id.location_spinner);
+            TextView profile = actionBar.getCustomView().findViewById(R.id.user_icon_textview);
+            refreshTextView = actionBar.getCustomView().findViewById(R.id.refresh_icon_textview);
+            locationProgressBar = actionBar.getCustomView().findViewById(R.id.refresh_progress);
 
 //        String[] city = {"New Delhi"};
 //        ArrayAdapter arrayAdapter = new ArrayAdapter(HomeActivity.this, R.layout.spinner_item, city);
 //        arrayAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
 //        locationSpinner.setAdapter(arrayAdapter);
 
-        refreshTextView.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
+            refreshTextView.setOnClickListener(new View.OnClickListener() {
+                @Override
+                public void onClick(View v) {
 
-                new Thread(new Runnable() {
-                    @Override
-                    public void run() {
-                        runOnUiThread(new Runnable() {
-                            @Override
-                            public void run() {
-                                refreshTextView.setVisibility(View.GONE);
-                                locationProgressBar.setVisibility(View.VISIBLE);
-                                locationSpinner.setVisibility(View.GONE);
+                    new Thread(new Runnable() {
+                        @Override
+                        public void run() {
+                            runOnUiThread(new Runnable() {
+                                @Override
+                                public void run() {
+                                    refreshTextView.setVisibility(View.GONE);
+                                    locationProgressBar.setVisibility(View.VISIBLE);
+                                    locationSpinner.setVisibility(View.GONE);
 
-                            }
-                        });
-                        updateLocationOnUI();
-                    }
-                }).start();
-            }
-        });
+                                }
+                            });
+                            updateLocationOnUI();
+                        }
+                    }).start();
+                }
+            });
 
-        profile.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
+            profile.setOnClickListener(new View.OnClickListener() {
+                @Override
+                public void onClick(View v) {
 
-            }
-        });
+                }
+            });
+        }
+
 //        locationSpinner.setOnTouchListener(new View.OnTouchListener() {
 //            @Override
 //            public boolean onTouch(View v, MotionEvent event) {
@@ -142,7 +145,17 @@ public class HomeActivity extends AppCompatActivity {
 
         Geocoder geocoder;
         geocoder = new Geocoder(this, Locale.getDefault());
-        @SuppressLint("MissingPermission") Location mLastLocation = LocationServices.FusedLocationApi.getLastLocation(googleApiClient);
+        if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED && ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
+            // TODO: Consider calling
+            //    ActivityCompat#requestPermissions
+            // here to request the missing permissions, and then overriding
+            //   public void onRequestPermissionsResult(int requestCode, String[] permissions,
+            //                                          int[] grantResults)
+            // to handle the case where the user grants the permission. See the documentation
+            // for ActivityCompat#requestPermissions for more details.
+            return;
+        }
+        Location mLastLocation = LocationServices.FusedLocationApi.getLastLocation(googleApiClient);
         if (mLastLocation != null) {
             try {
                 final List<Address> addresses = geocoder.getFromLocation(mLastLocation.getLatitude(), mLastLocation.getLongitude(), 1); // Here 1 represent max location result to returned, by documents it recommended 1 to 5
@@ -168,7 +181,7 @@ public class HomeActivity extends AppCompatActivity {
                         for(Address value:addresses){
                             arrayList.add(value.getAddressLine(0).toString());
                         }
-                        ArrayAdapter arrayAdapter = new ArrayAdapter(HomeActivity.this, R.layout.spinner_item, arrayList);
+                        ArrayAdapter<String> arrayAdapter = new ArrayAdapter<>(HomeActivity.this, R.layout.spinner_item, arrayList);
 //                    arrayAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
                         locationSpinner.setAdapter(arrayAdapter);
                         refreshTextView.setVisibility(View.VISIBLE);
@@ -183,7 +196,6 @@ public class HomeActivity extends AppCompatActivity {
 //            String postalCode = addresses.get(0).getPostalCode();
 //            String knownName = addresses.get(0).getFeatureName();
             }catch (Exception e){
-                System.out.println(e.getMessage());
 
             }
 
@@ -227,19 +239,19 @@ public class HomeActivity extends AppCompatActivity {
                     .build();
         }
 
-        if (googleApiClient != null) {
-            googleApiClient.connect();
-        }
+        googleApiClient.connect();
     }
 
     private void requestPermission() {
 
 //Check whether our app has the fine location permission, and request it if necessary//
 
-        if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED && ActivityCompat.checkSelfPermission(HomeActivity.this, Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
+        if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED || ActivityCompat.checkSelfPermission(HomeActivity.this, Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
                 requestPermissions(new String[]{Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_COARSE_LOCATION}, 121);
             }
+        }else{
+            updateLocation();
         }
     }
 
@@ -248,31 +260,55 @@ public class HomeActivity extends AppCompatActivity {
     @Override
     public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults);
-        switch (requestCode) {
-            case 121:
-                if (grantResults[0] != PackageManager.PERMISSION_GRANTED || grantResults[1] != PackageManager.PERMISSION_GRANTED) {
-                    Toast.makeText(getApplicationContext(), "This app requires location permissions to detect your location!", Toast.LENGTH_LONG).show();
-                    finish();
-                }
-                break;
+        if (requestCode == 121) {
+            if (grantResults[0] != PackageManager.PERMISSION_GRANTED || grantResults[1] != PackageManager.PERMISSION_GRANTED) {
+                Toast.makeText(getApplicationContext(), "This app requires location permissions to detect your location!", Toast.LENGTH_LONG).show();
+                finish();
+            } else {
+                updateLocation();
+            }
         }
     }
+    @SuppressLint("StaticFieldLeak")
     class AsyncOdooRPCcall extends AsyncTask<HashMap<String,Object>,ProgressBar,HashMap<String,Object>>{
 
         @Override
         protected HashMap<String,Object> doInBackground(HashMap<String, Object>... hashMaps) {
-            if(odooRPC==null){
-                odooRPC=new OdooRPC();
-                try {
-                    odooRPC.login();
-                } catch (XMLRPCException e) {
-                    e.printStackTrace();
+            HashMap<String, Object> result=null;
+            try {
+                if (odooRPC == null) {
+                    odooRPC = new OdooRPC();
+                    try {
+                        odooRPC.login();
+                    } catch (XMLRPCException e) {
+                        e.printStackTrace();
+                    }
                 }
-            }
-            String method = (String) hashMaps[0].get("method");
-            hashMaps[0].remove("method");
-            HashMap<String,Object> result = (HashMap) odooRPC.callOdoo("res.partner", method,hashMaps[0]);
+                String method = (String) hashMaps[0].get("method");
+                hashMaps[0].remove("method");
+                result = (HashMap<String, Object>) odooRPC.callOdoo("res.partner", method, hashMaps[0]);
+            }catch (Exception e){
+                Log.e("ODOO RPC :",e.getMessage());
 
+                runOnUiThread(new Runnable() {
+                    @Override
+                    public void run() {
+                        new AlertDialog.Builder(HomeActivity.this)
+                                .setTitle("App Info")
+                                .setMessage("No internet Connection Found.")
+                                .setIcon(R.mipmap.any_service_icon_foreground)
+                                .setPositiveButton("OK", new DialogInterface.OnClickListener() {
+                                    @Override
+                                    public void onClick(DialogInterface dialog, int which) {
+                                        finishAffinity();
+                                    }
+                                })
+                                .setCancelable(false)
+                                .show();
+                    }
+                });
+
+            }
             return result;
         }
     }

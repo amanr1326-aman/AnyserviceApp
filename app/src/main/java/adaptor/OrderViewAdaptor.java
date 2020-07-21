@@ -29,10 +29,12 @@ import helper.Order;
 public class OrderViewAdaptor extends ArrayAdapter<Order> {
     int resourceLayout;
     private Context mContext;
-    public OrderViewAdaptor(@NonNull Context context, int resource, @NonNull List<Order> objects) {
+    int uid;
+    public OrderViewAdaptor(@NonNull Context context, int resource, @NonNull List<Order> objects,String uid) {
         super(context, resource, objects);
         this.resourceLayout = resource;
         this.mContext = context;
+        this.uid=Integer.parseInt(uid);
     }
 
     @NonNull
@@ -47,6 +49,7 @@ public class OrderViewAdaptor extends ArrayAdapter<Order> {
         final Order p = getItem(position);
         if(p!=null && resourceLayout==R.layout.order_item){
             TextView name = v.findViewById(R.id.order_name);
+            TextView displayName = v.findViewById(R.id.display_name);
             TextView desc = v.findViewById(R.id.description);
             TextView state = v.findViewById(R.id.state);
             TextView date = v.findViewById(R.id.date);
@@ -61,6 +64,11 @@ public class OrderViewAdaptor extends ArrayAdapter<Order> {
 
             }
             if(p.getOrderDate()!=null) date.setText(new SimpleDateFormat("EEE, dd MMM yyyy").format(p.getOrderDate()));
+            if(uid==p.getAgentID()){
+                displayName.setText("Customer - "+p.getCustName());
+            }else{
+                displayName.setText("Agent - "+p.getAgentName());
+            }
             try {
                 byte[] decodedString = Base64.decode(p.getIcon(), Base64.DEFAULT);
                 Bitmap decodedBitmap = BitmapFactory.decodeByteArray(decodedString, 0, decodedString.length);

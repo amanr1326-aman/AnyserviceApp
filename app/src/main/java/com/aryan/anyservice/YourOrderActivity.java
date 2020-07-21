@@ -8,6 +8,7 @@ import de.timroes.axmlrpc.XMLRPCException;
 import helper.OdooRPC;
 import helper.ServiceDetails;
 
+import android.annotation.SuppressLint;
 import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
@@ -18,6 +19,7 @@ import android.graphics.BitmapFactory;
 import android.os.AsyncTask;
 import android.os.Bundle;
 import android.util.Base64;
+import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.widget.Button;
@@ -40,7 +42,7 @@ public class YourOrderActivity extends AppCompatActivity {
     String uid;
     ArrayList<? extends ServiceDetails> services;
     Button backButton,confirmButton;
-    TextView companyTextView,totalpriceTextView,priceTextView,visitcostTextView;
+    TextView companyTextView,totalpriceTextView,priceTextView,visitcostTextView,pendingTextView;
     ListView serviceListView;
     OdooRPC odooRPC;
     String address;
@@ -59,6 +61,7 @@ public class YourOrderActivity extends AppCompatActivity {
 
         double price = getIntent().getDoubleExtra("price",0);
         final double visitPrice = getIntent().getDoubleExtra("visitPrice",0);
+        final double prevPrice = getIntent().getDoubleExtra("pending",0);
         double totalPrice = getIntent().getDoubleExtra("totalPrice",0);
         String company = getIntent().getStringExtra("company");
         services = getIntent().getParcelableArrayListExtra("services");
@@ -69,11 +72,13 @@ public class YourOrderActivity extends AppCompatActivity {
         totalpriceTextView = findViewById(R.id.total_cost);
         priceTextView = findViewById(R.id.price);
         visitcostTextView = findViewById(R.id.delivery_cost);
+        pendingTextView = findViewById(R.id.pending);
         serviceListView = findViewById(R.id.services);
         priceTextView.setText(""+price);
         visitcostTextView.setText(""+visitPrice);
         totalpriceTextView.setText(""+totalPrice);
         companyTextView.setText(company);
+        pendingTextView.setText(""+prevPrice);
 
         ServiceDetailsAdaptor serviceDetailsAdaptor=new ServiceDetailsAdaptor(getApplicationContext(),R.layout.service_list_item, (List<ServiceDetails>) services);
         serviceListView.setAdapter(serviceDetailsAdaptor);
@@ -96,6 +101,11 @@ public class YourOrderActivity extends AppCompatActivity {
                 final Button placeOrder=layout.findViewById(R.id.place_order);
                 final ProgressBar progress=layout.findViewById(R.id.progressbar);
                 final ArrayList<HashMap<String,Integer>> serviceIds=new ArrayList<>();
+                final AlertDialog alertDialog = new AlertDialog.Builder(YourOrderActivity.this)
+                                .setTitle("Place Order")
+                                .setIcon(R.mipmap.any_service_icon_foreground)
+                                .setView(layout)
+                                .show();
                 gpsAddress.setText(address);
                 for(ServiceDetails service:services){
                     HashMap<String,Integer> map=new HashMap();
@@ -115,6 +125,7 @@ public class YourOrderActivity extends AppCompatActivity {
                             map.put("login", uid);
                             map.put("services", serviceIds.toArray());
                             map.put("visiting_charge", visitPrice);
+                            map.put("pending", prevPrice);
                             map.put("gps_address", gpsAddress.getText().toString());
                             map.put("full_address", fullAddress.getText().toString());
                             map.put("remark", remark.getText().toString());
@@ -122,6 +133,8 @@ public class YourOrderActivity extends AppCompatActivity {
 
                             AsyncOdooRPCcall task = new AsyncOdooRPCcall();
                             task.execute(map);
+                            alertDialog.setCancelable(false);
+
                         }else if(fullAddress.getText().toString().equals("")){
                             fullAddress.setError("This Field is required");
                         }else if(remark.getText().toString().equals("")){
@@ -131,11 +144,6 @@ public class YourOrderActivity extends AppCompatActivity {
                         }
                     }
                 });
-                new AlertDialog.Builder(YourOrderActivity.this)
-                        .setTitle("Place Order")
-                        .setIcon(R.mipmap.any_service_icon_foreground)
-                        .setView(layout)
-                        .show();
             }
         });
         HashMap map = new HashMap<String,String>();
@@ -145,41 +153,66 @@ public class YourOrderActivity extends AppCompatActivity {
         AsyncOdooRPCcall task = new AsyncOdooRPCcall();
         task.execute(map);
     }
+    @SuppressLint("StaticFieldLeak")
     class AsyncOdooRPCcall extends AsyncTask<HashMap<String,Object>, ProgressBar,HashMap<String,Object>> {
 
         @Override
         protected HashMap<String,Object> doInBackground(HashMap<String, Object>... hashMaps) {
-            if(odooRPC==null){
-                odooRPC=new OdooRPC();
-                try {
-                    odooRPC.login();
-                } catch (XMLRPCException e) {
-                    e.printStackTrace();
+            HashMap<String, Object> result=null;
+            try {
+                if (odooRPC == null) {
+                    odooRPC = new OdooRPC();
+                    try {
+                        odooRPC.login();
+                    } catch (XMLRPCException e) {
+                        e.printStackTrace();
+                    }
                 }
-            }
-            String method = (String) hashMaps[0].get("method");
-            String model = (String) hashMaps[0].get("model");
-            hashMaps[0].remove("method");
-            hashMaps[0].remove("model");
-            final HashMap<String,Object> result = (HashMap) odooRPC.callOdoo(model, method,hashMaps[0]);
+                String method = (String) hashMaps[0].get("method");
+                String model = (String) hashMaps[0].get("model");
+                hashMaps[0].remove("method");
+                hashMaps[0].remove("model");
+                result = (HashMap) odooRPC.callOdoo(model, method, hashMaps[0]);
 
-            if(result.get("result").equals("Success")) {
-                if (method.equals("xmlrpc_create_order")) {
-                    runOnUiThread(new Runnable() {
-                        @Override
-                        public void run() {
-                            String orderId= String.valueOf(result.get("order_id"));
-                            Toast.makeText(getApplicationContext(), "Your Order is placed with order id - "+orderId, Toast.LENGTH_LONG).show();
-                            Intent intent=new Intent(YourOrderActivity.this,HomeActivity.class);
-                            finishAffinity();
-                            startActivity(intent);
+                if (result.get("result").equals("Success")) {
+                    if (method.equals("xmlrpc_create_order")) {
+                        final HashMap<String, Object> finalResult = result;
+                        runOnUiThread(new Runnable() {
+                            @Override
+                            public void run() {
+                                String orderId = String.valueOf(finalResult.get("order_id"));
+                                Toast.makeText(getApplicationContext(), "Your Order is placed with order id - " + orderId, Toast.LENGTH_LONG).show();
+                                Intent intent = new Intent(YourOrderActivity.this, HomeActivity.class);
+                                finishAffinity();
+                                startActivity(intent);
 
-                        }
-                    });
-                }else if (method.equals("get_user_details")) {
-                    address= result.get("place").toString();
+                            }
+                        });
+                    } else if (method.equals("get_user_details")) {
+                        address = result.get("place").toString();
 
+                    }
                 }
+            }catch (Exception e){
+                Log.e("ODOO RPC :",e.getMessage());
+
+                runOnUiThread(new Runnable() {
+                    @Override
+                    public void run() {
+                        new AlertDialog.Builder(YourOrderActivity.this)
+                                .setTitle("App Info")
+                                .setMessage("No internet Connection Found.")
+                                .setIcon(R.mipmap.any_service_icon_foreground)
+                                .setPositiveButton("OK", new DialogInterface.OnClickListener() {
+                                    @Override
+                                    public void onClick(DialogInterface dialog, int which) {
+                                        finishAffinity();
+                                    }
+                                })
+                                .setCancelable(false)
+                                .show();
+                    }
+                });
             }
 
             return result;

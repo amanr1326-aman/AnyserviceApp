@@ -1,9 +1,16 @@
 package com.aryan.anyservice.ui.dashboard;
 
+import android.app.AlertDialog;
 import android.content.Context;
+import android.content.DialogInterface;
 import android.content.SharedPreferences;
 import android.os.AsyncTask;
+import android.util.Log;
 import android.widget.ProgressBar;
+
+import com.aryan.anyservice.LoginActivity;
+import com.aryan.anyservice.OrderStatusActivity;
+import com.aryan.anyservice.R;
 
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
@@ -57,86 +64,95 @@ public class DashboardViewModel extends ViewModel {
     }
 
 
+
     class AsyncOdooRPCcall extends AsyncTask<HashMap<String,Object>, ProgressBar,HashMap<String,Object>> {
 
         @Override
         protected HashMap<String,Object> doInBackground(HashMap<String, Object>... hashMaps) {
-            if(odooRPC==null){
-                odooRPC=new OdooRPC();
-                try {
-                    odooRPC.login();
-                } catch (XMLRPCException e) {
-                    e.printStackTrace();
-                }
-            }
-            String method = (String) hashMaps[0].get("method");
-            String model = (String) hashMaps[0].get("model");
-            hashMaps[0].remove("method");
-            hashMaps[0].remove("model");
-            HashMap<String,Object> result = (HashMap) odooRPC.callOdoo(model, method,hashMaps[0]);
-
-            if(result.get("result").equals("Success")) {
-                if(method.equals("get_user_done_orders")){
-                    Object[] objects = (Object[]) result.get("orders");
-                    List<Order> list = new ArrayList<>();
-                    for (Object obj : objects) {
-                        HashMap<String,String> order= (HashMap<String, String>) obj;
-                        Order orderObj=new Order();
-                        orderObj.setId(Integer.parseInt(String.valueOf(order.get("id"))));
-                        orderObj.setCustID(Integer.parseInt(String.valueOf(order.get("cust_id"))));
-                        orderObj.setAgentID(Integer.parseInt(String.valueOf(order.get("agent_id"))));
-                        orderObj.setTotalPrice(Double.parseDouble(String.valueOf(order.get("total_price"))));
-                        orderObj.setName(order.get("name"));
-                        orderObj.setCustName(order.get("cust_name"));
-                        orderObj.setAgentName(order.get("agent_name"));
-                        orderObj.setDescription(order.get("description"));
-                        orderObj.setGpsAddress(order.get("gps_address"));
-                        orderObj.setFullAddress(order.get("full_address"));
-                        orderObj.setState(order.get("state"));
-                        orderObj.setCustPhone(order.get("cust_phone"));
-                        orderObj.setAgentPhone(order.get("agent_phone"));
-                        try {
-                            orderObj.setOrderDate(new SimpleDateFormat("yyyy-mm-dd").parse(order.get("order_date")));
-                            orderObj.setFinalDate(new SimpleDateFormat("yyyy-mm-dd").parse(order.get("final_date")));
-                        } catch (ParseException e) {
-                            e.printStackTrace();
-                        }
-                        list.add(orderObj);
+            HashMap<String, Object> result=null;
+            try {
+                if (odooRPC == null) {
+                    odooRPC = new OdooRPC();
+                    try {
+                        odooRPC.login();
+                    } catch (XMLRPCException e) {
+                        e.printStackTrace();
                     }
-                    doneOrders.postValue(list);
+                }
+                String method = (String) hashMaps[0].get("method");
+                String model = (String) hashMaps[0].get("model");
+                hashMaps[0].remove("method");
+                hashMaps[0].remove("model");
+                result = (HashMap) odooRPC.callOdoo(model, method, hashMaps[0]);
 
-
-                }else if(method.equals("get_user_orders")){
-                    Object[] objects = (Object[]) result.get("orders");
-                    List<Order> list = new ArrayList<>();
-                    for (Object obj : objects) {
-                        HashMap<String,String> order= (HashMap<String, String>) obj;
-                        Order orderObj=new Order();
-                        orderObj.setId(Integer.parseInt(String.valueOf(order.get("id"))));
-                        orderObj.setCustID(Integer.parseInt(String.valueOf(order.get("cust_id"))));
-                        orderObj.setAgentID(Integer.parseInt(String.valueOf(order.get("agent_id"))));
-                        orderObj.setTotalPrice(Double.parseDouble(String.valueOf(order.get("total_price"))));
-                        orderObj.setName(order.get("name"));
-                        orderObj.setIcon(order.get("image"));
-                        orderObj.setCustName(order.get("cust_name"));
-                        orderObj.setAgentName(order.get("agent_name"));
-                        orderObj.setDescription(order.get("description"));
-                        orderObj.setGpsAddress(order.get("gps_address"));
-                        orderObj.setFullAddress(order.get("full_address"));
-                        orderObj.setState(order.get("state"));
-                        orderObj.setCustPhone(order.get("cust_phone"));
-                        orderObj.setAgentPhone(order.get("agent_phone"));
-                        try {
-                            orderObj.setOrderDate(new SimpleDateFormat("yyyy-mm-dd").parse(order.get("order_date")));
-                            orderObj.setFinalDate(new SimpleDateFormat("yyyy-mm-dd").parse(order.get("final_date")));
-                        } catch (ParseException e) {
-                            e.printStackTrace();
+                if (result.get("result").equals("Success")) {
+                    if (method.equals("get_user_done_orders")) {
+                        Object[] objects = (Object[]) result.get("orders");
+                        List<Order> list = new ArrayList<>();
+                        for (Object obj : objects) {
+                            HashMap<String, String> order = (HashMap<String, String>) obj;
+                            Order orderObj = new Order();
+                            orderObj.setId(Integer.parseInt(String.valueOf(order.get("id"))));
+                            orderObj.setCustID(Integer.parseInt(String.valueOf(order.get("cust_id"))));
+                            orderObj.setAgentID(Integer.parseInt(String.valueOf(order.get("agent_id"))));
+                            orderObj.setTotalPrice(Double.parseDouble(String.valueOf(order.get("total_price"))));
+                            orderObj.setName(order.get("name"));
+                            orderObj.setCustName(order.get("cust_name"));
+                            orderObj.setAgentName(order.get("agent_name"));
+                            orderObj.setDescription(order.get("description"));
+                            orderObj.setGpsAddress(order.get("gps_address"));
+                            orderObj.setFullAddress(order.get("full_address"));
+                            orderObj.setState(order.get("state"));
+                            orderObj.setCustPhone(order.get("cust_phone"));
+                            orderObj.setAgentPhone(order.get("agent_phone"));
+                            orderObj.setRating(Float.parseFloat(String.valueOf(order.get("rating"))));
+                            try {
+                                orderObj.setOrderDate(new SimpleDateFormat("yyyy-mm-dd").parse(order.get("order_date")));
+                                orderObj.setFinalDate(new SimpleDateFormat("yyyy-mm-dd").parse(order.get("final_date")));
+                            } catch (ParseException e) {
+                                e.printStackTrace();
+                            }
+                            list.add(orderObj);
                         }
-                        list.add(orderObj);
+                        doneOrders.postValue(list);
+
+
+                    } else if (method.equals("get_user_orders")) {
+                        Object[] objects = (Object[]) result.get("orders");
+                        List<Order> list = new ArrayList<>();
+                        for (Object obj : objects) {
+                            HashMap<String, String> order = (HashMap<String, String>) obj;
+                            Order orderObj = new Order();
+                            orderObj.setId(Integer.parseInt(String.valueOf(order.get("id"))));
+                            orderObj.setCustID(Integer.parseInt(String.valueOf(order.get("cust_id"))));
+                            orderObj.setAgentID(Integer.parseInt(String.valueOf(order.get("agent_id"))));
+                            orderObj.setTotalPrice(Double.parseDouble(String.valueOf(order.get("total_price"))));
+                            orderObj.setName(order.get("name"));
+                            orderObj.setIcon(order.get("image"));
+                            orderObj.setCustName(order.get("cust_name"));
+                            orderObj.setAgentName(order.get("agent_name"));
+                            orderObj.setDescription(order.get("description"));
+                            orderObj.setGpsAddress(order.get("gps_address"));
+                            orderObj.setFullAddress(order.get("full_address"));
+                            orderObj.setState(order.get("state"));
+                            orderObj.setCustPhone(order.get("cust_phone"));
+                            orderObj.setAgentPhone(order.get("agent_phone"));
+                            orderObj.setRating(Float.parseFloat(String.valueOf(order.get("rating"))));
+                            try {
+                                orderObj.setOrderDate(new SimpleDateFormat("yyyy-mm-dd").parse(order.get("order_date")));
+                                orderObj.setFinalDate(new SimpleDateFormat("yyyy-mm-dd").parse(order.get("final_date")));
+                            } catch (ParseException e) {
+                                e.printStackTrace();
+                            }
+                            list.add(orderObj);
+                        }
+                        openOrders.postValue(list);
+
                     }
-                    openOrders.postValue(list);
 
                 }
+            }catch(Exception e){
+                Log.e("ODOO RPC :",e.getMessage());
 
             }
 

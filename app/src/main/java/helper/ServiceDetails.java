@@ -9,7 +9,14 @@ public class ServiceDetails implements Serializable {
     private String icon;
     private int unit=1,id,agent_id;
     private float rating;
-    private double price,deliveryCost;
+    private double price;
+    private double deliveryCost;
+
+    public double getBalance() {
+        return balance;
+    }
+
+    private double balance;
     private boolean selected=false,measurable=false;
 
     public String getName() {
@@ -110,5 +117,9 @@ public class ServiceDetails implements Serializable {
 
     public void setDeliveryCost(double deliveryCost) {
         this.deliveryCost = deliveryCost;
+    }
+
+    public void setBalance(double balance) {
+        this.balance = balance;
     }
 }

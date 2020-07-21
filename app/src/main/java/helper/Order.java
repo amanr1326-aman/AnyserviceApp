@@ -147,5 +147,15 @@ public class Order implements Serializable {
     String icon;
     double totalPrice;
 
+    public float getRating() {
+        return rating;
+    }
+
+    public void setRating(float rating) {
+        this.rating = rating;
+    }
+
+    float rating;
+
 
 }

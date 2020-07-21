@@ -10,8 +10,9 @@
         android:supportsRtl="true"
         android:theme="@style/AppTheme"
         android:usesCleartextTraffic="true">
-        <activity android:name=".OrderStatusActivity"
-            android:theme="@style/Theme.AppCompat.DayNight.NoActionBar" ></activity>
+        <activity
+            android:name=".OrderStatusActivity"
+            android:theme="@style/Theme.AppCompat.DayNight.NoActionBar" />
         <activity android:name=".YourOrderActivity"
             android:theme="@style/Theme.AppCompat.DayNight.NoActionBar"  />
         <activity
@@ -31,6 +32,7 @@
         <activity
             android:name=".HomeActivity"
             android:label="@string/title_activity_home"
+            android:launchMode="singleTop"
             />
         <activity
             android:name=".WelcomeActivity"
@@ -48,13 +50,18 @@
         <meta-data
             android:name="com.google.android.geo.API_KEY"
             android:value="@string/google_maps_key" />
+        <service android:enabled="true" android:name=".NotifyService" android:process=":process2"/>
     </application>
 
     <uses-feature android:name="android.hardware.camera" />
     <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
+    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
     <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />
     <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.ACCESS_NOTIFICATION_POLICY" />
+    <uses-permission android:name="android.permission.WAKE_LOCK" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
 
     <uses-permission android:name="android.permission.CAMERA" />
 

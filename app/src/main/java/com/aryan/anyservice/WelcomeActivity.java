@@ -41,7 +41,7 @@ public class WelcomeActivity extends AppCompatActivity {
         }else {
             String msg = getIntent().getStringExtra("msg");
             TextView tv = findViewById(R.id.pending_textview);
-            tv.setText(msg+"\nWhile we are checking the same.....\nPlease check after few minutes.");
+            tv.setText(String.format("%s\nWhile we are checking the same.....\nPlease check after few minutes.", msg));
         }
     }
     // slide the view from its current position to below itself

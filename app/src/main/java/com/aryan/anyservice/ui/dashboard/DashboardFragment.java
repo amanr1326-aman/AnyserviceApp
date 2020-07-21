@@ -1,6 +1,8 @@
 package com.aryan.anyservice.ui.dashboard;
 
+import android.content.Context;
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.os.Bundle;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -14,19 +16,24 @@ import adaptor.ServiceDetailsAdaptor;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.fragment.app.Fragment;
+import androidx.fragment.app.FragmentTransaction;
 import androidx.lifecycle.Observer;
 import androidx.lifecycle.ViewModelProviders;
+import androidx.swiperefreshlayout.widget.SwipeRefreshLayout;
 import helper.Order;
 import helper.Utility;
 
 import com.aryan.anyservice.OrderStatusActivity;
 import com.aryan.anyservice.R;
 
+import java.util.HashMap;
 import java.util.List;
 
 public class DashboardFragment extends Fragment {
 
     private DashboardViewModel dashboardViewModel;
+    boolean active=false;
+
 
     public View onCreateView(@NonNull LayoutInflater inflater,
                              ViewGroup container, Bundle savedInstanceState) {
@@ -35,10 +42,22 @@ public class DashboardFragment extends Fragment {
         View root = inflater.inflate(R.layout.fragment_dashboard, container, false);
         final ListView openOrders = root.findViewById(R.id.open_services);
         final ListView doneOrders = root.findViewById(R.id.done_services);
+        final SwipeRefreshLayout swipeRefreshLayout= root.findViewById(R.id.refresh_layout);
+        swipeRefreshLayout.setOnRefreshListener(new SwipeRefreshLayout.OnRefreshListener() {
+            @Override
+            public void onRefresh() {
+                swipeRefreshLayout.setRefreshing(false);
+                FragmentTransaction fragmentTransaction = getFragmentManager().beginTransaction();
+                fragmentTransaction.detach(DashboardFragment.this).attach(DashboardFragment.this).commit();
+
+            }
+        });
+        SharedPreferences sp = getContext().getSharedPreferences("odoologin", Context.MODE_PRIVATE);
+        final String uid = sp.getString("login",null);
         dashboardViewModel.getDoneServices(getContext()).observe(getViewLifecycleOwner(), new Observer<List<Order>>() {
             @Override
             public void onChanged(List<Order> orders) {
-                OrderViewAdaptor serviceDetailsAdaptor=new OrderViewAdaptor(getContext(),R.layout.order_item,orders);
+                OrderViewAdaptor serviceDetailsAdaptor=new OrderViewAdaptor(getContext(),R.layout.order_item,orders,uid);
                 doneOrders.setAdapter(serviceDetailsAdaptor);
                 Utility.setListViewHeightBasedOnChildren(doneOrders);
             }
@@ -46,7 +65,7 @@ public class DashboardFragment extends Fragment {
         dashboardViewModel.getOpenServices().observe(getViewLifecycleOwner(), new Observer<List<Order>>() {
             @Override
             public void onChanged(List<Order> orders) {
-                OrderViewAdaptor serviceDetailsAdaptor=new OrderViewAdaptor(getContext(),R.layout.order_item,orders);
+                OrderViewAdaptor serviceDetailsAdaptor=new OrderViewAdaptor(getContext(),R.layout.order_item,orders,uid);
                 openOrders.setAdapter(serviceDetailsAdaptor);
                 Utility.setListViewHeightBasedOnChildren(openOrders);
             }
@@ -57,7 +76,7 @@ public class DashboardFragment extends Fragment {
                 Order order= (Order) openOrders.getAdapter().getItem(position);
                 Intent intent =new Intent(getContext(),OrderStatusActivity.class);
                 intent.putExtra("order",order);
-                startActivity(intent);
+                startActivityForResult(intent,121);
             }
         });
         doneOrders.setOnItemClickListener(new AdapterView.OnItemClickListener() {
@@ -66,9 +85,21 @@ public class DashboardFragment extends Fragment {
                 Order order= (Order) doneOrders.getAdapter().getItem(position);
                 Intent intent =new Intent(getContext(),OrderStatusActivity.class);
                 intent.putExtra("order",order);
-                startActivity(intent);
+                startActivityForResult(intent,121);
             }
         });
+
         return root;
     }
+
+    @Override
+    public void onActivityResult(int requestCode, int resultCode, Intent data) {
+//        super.onActivityResult(requestCode, resultCode, data);
+        if(resultCode==121 || requestCode==121){
+            FragmentTransaction fragmentTransaction = getFragmentManager().beginTransaction();
+            fragmentTransaction.detach(DashboardFragment.this).attach(DashboardFragment.this).commit();
+        }
+    }
+
+
 }

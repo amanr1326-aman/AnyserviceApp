@@ -2,14 +2,11 @@ package com.aryan.anyservice;
 
 import android.Manifest;
 import android.animation.ObjectAnimator;
+import android.annotation.SuppressLint;
 import android.app.Activity;
 
 import androidx.annotation.NonNull;
-import androidx.annotation.RequiresApi;
 import androidx.appcompat.widget.AppCompatSpinner;
-import androidx.appcompat.widget.SwitchCompat;
-import androidx.lifecycle.Observer;
-import androidx.lifecycle.ViewModelProviders;
 
 import android.app.AlertDialog;
 import android.content.ContentValues;
@@ -22,9 +19,6 @@ import android.database.Cursor;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.Matrix;
-import android.graphics.Path;
-import android.graphics.drawable.BitmapDrawable;
-import android.graphics.drawable.Drawable;
 import android.net.Uri;
 import android.os.AsyncTask;
 import android.os.Build;
@@ -41,30 +35,20 @@ import android.text.TextWatcher;
 import android.util.Base64;
 import android.util.DisplayMetrics;
 import android.util.Log;
-import android.view.KeyEvent;
 import android.view.View;
 import android.view.animation.AccelerateDecelerateInterpolator;
-import android.view.animation.AlphaAnimation;
-import android.view.animation.Animation;
-import android.view.animation.TranslateAnimation;
-import android.view.inputmethod.EditorInfo;
 import android.view.inputmethod.InputMethodManager;
 import android.widget.ArrayAdapter;
 import android.widget.Button;
-import android.widget.CompoundButton;
 import android.widget.EditText;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.ProgressBar;
 import android.widget.RadioButton;
 import android.widget.RadioGroup;
-import android.widget.RelativeLayout;
 import android.widget.TextView;
 import android.widget.Toast;
-import android.widget.ToggleButton;
 
-import com.aryan.anyservice.BuildConfig;
-import com.aryan.anyservice.R;
 import com.google.android.gms.auth.api.signin.GoogleSignIn;
 import com.google.android.gms.auth.api.signin.GoogleSignInAccount;
 import com.google.android.gms.auth.api.signin.GoogleSignInClient;
@@ -75,9 +59,6 @@ import com.google.android.gms.tasks.Task;
 
 import java.io.ByteArrayOutputStream;
 import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Timer;
 
 public class LoginActivity extends AppCompatActivity {
 
@@ -101,6 +82,14 @@ public class LoginActivity extends AppCompatActivity {
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_login);
+//        if(!isTaskRoot()
+//                    && getIntent().hasCategory(Intent.CATEGORY_LAUNCHER)
+//                    && getIntent().getAction()!=null
+//                    && getIntent().getAction().equals(Intent.ACTION_MAIN)
+//                    ){
+//            finish();
+//            return;
+//        }
 
         GoogleSignInOptions gso = new GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN)
                 .requestEmail()
@@ -265,7 +254,7 @@ public class LoginActivity extends AppCompatActivity {
                     public void run() {
                         final String mainOTPText = otpTextView.getText().toString();
                         for(int i=59; i>0; i--) {
-                            if(state!="otp"){
+                            if(!state.equals("otp")){
 
                                 runOnUiThread(new Runnable() {
                                     @Override
@@ -285,7 +274,7 @@ public class LoginActivity extends AppCompatActivity {
                             runOnUiThread(new Runnable() {
                                 @Override
                                 public void run() {
-                                    otpTextView.setText(mainOTPText+" (0:"+ finalI +")");
+                                    otpTextView.setText(String.format("%s (0:%d)", mainOTPText, finalI));
 
                                 }
                             });
@@ -490,7 +479,7 @@ public class LoginActivity extends AppCompatActivity {
             slideUp(null,loginLinearLayout,phoneLinearLayout);
             state="root";
             backButton.setVisibility(View.GONE);
-        }else if(state=="otp"){
+        }else if(state.equals("otp")){
             state = "phone";
 //            if(otpTask!=null){
 //                otpTask.cancel(true);
@@ -507,7 +496,7 @@ public class LoginActivity extends AppCompatActivity {
                 state = "phone";
 //            }while(!otpTask.isCancelled());
 
-        }else if(state=="create_account"){
+        }else if(state.equals("create_account")){
             createLinearLayout.setVisibility(View.GONE);
             fullnameEditText.setText("");
             fullnameEditText.setEnabled(true);
@@ -597,6 +586,7 @@ public class LoginActivity extends AppCompatActivity {
         Toast.makeText(getApplicationContext(), errorString, Toast.LENGTH_SHORT).show();
     }
 
+    @SuppressLint("StaticFieldLeak")
     private class AsyncSplitTask extends AsyncTask<View,View,String>{
         @Override
         protected void onPreExecute() {
@@ -624,7 +614,7 @@ public class LoginActivity extends AppCompatActivity {
                         if(uid!=null){
                             map.put("login",uid);
                         }
-                        final HashMap<String,Object> result = (HashMap) odooRPC.callOdoo("res.partner","check_app_details",map);
+                        final HashMap<String,Object> result = (HashMap<String, Object>) odooRPC.callOdoo("res.partner","check_app_details",map);
                         if(result.get("result").equals("Fail") && result.get("code").equals(101)){
                             state="root";
                         }else if(result.get("result").equals("Fail") && result.get("code").equals(103)){
@@ -639,24 +629,6 @@ public class LoginActivity extends AppCompatActivity {
                             startActivity(intent);
                             return null;
 
-
-//                            runOnUiThread(new Runnable() {
-//                                @Override
-//                                public void run() {
-//                                    new AlertDialog.Builder(LoginActivity.this)
-//                                            .setTitle("App Info")
-//                                            .setMessage("Sucess : "+result.get("name").toString())
-//                                            .setIcon(R.mipmap.any_service_icon_foreground)
-//                                            .setPositiveButton("OK", new DialogInterface.OnClickListener() {
-//                                                @Override
-//                                                public void onClick(DialogInterface dialog, int which) {
-//                                                    finishAffinity();
-//                                                }
-//                                            })
-//                                            .setCancelable(false)
-//                                            .show();
-//                                }
-//                            });
                         }
                         else{
                             runOnUiThread(new Runnable() {
@@ -679,18 +651,18 @@ public class LoginActivity extends AppCompatActivity {
                             return null;
                         }
 
-                }else if (state=="root"){
+                }else if (state.equals("root")){
                     state="phone";
-                }else if (state=="phone"){
+                }else if (state.equals("phone")){
                     user_otp="123456";
                     state="otp";
-                }else if (state=="otp"){
+                }else if (state.equals("otp")){
                     String otp = otpEditText.getText().toString();
                     if(otp.equals(user_otp)) {
                         HashMap map = new HashMap<String,String>();
                         String version = BuildConfig.VERSION_NAME;
                         map.put("phone",phoneEditText.getText().toString());
-                        final HashMap<String,Object> result = (HashMap) odooRPC.callOdoo("res.partner","check_user",map);
+                        final HashMap<String,Object> result = (HashMap<String, Object>) odooRPC.callOdoo("res.partner","check_user",map);
 
                         if(result.get("result").equals("Success")){
                             state="done";
@@ -698,7 +670,7 @@ public class LoginActivity extends AppCompatActivity {
                             SharedPreferences sp = getApplicationContext().getSharedPreferences("odoologin", Context.MODE_PRIVATE);
                             SharedPreferences.Editor editor = sp.edit();
                             editor.putString("login", uid);
-                            editor.commit();
+                            editor.apply();
                             state = "done";
                             Intent intent=new Intent(LoginActivity.this,WelcomeActivity.class);
                             intent.putExtra("result",true);
@@ -736,7 +708,7 @@ public class LoginActivity extends AppCompatActivity {
                             return null;
                         }else {
                             state = "create_account";
-                            final HashMap<String,Object> state_result = (HashMap) odooRPC.callOdoo("res.partner","get_states",new HashMap<String, Object>());
+                            final HashMap<String,Object> state_result = (HashMap<String, Object>) odooRPC.callOdoo("res.partner","get_states",new HashMap<String, Object>());
                             if(state_result.get("result").equals("Success")) {
                                 final Object[] states = (Object[]) state_result.get("states");
 
@@ -744,7 +716,7 @@ public class LoginActivity extends AppCompatActivity {
                                 runOnUiThread(new Runnable() {
                                     @Override
                                     public void run() {
-                                        ArrayAdapter arrayAdapter = new ArrayAdapter(LoginActivity.this, android.R.layout.simple_spinner_item, states);
+                                        ArrayAdapter<Object> arrayAdapter = new ArrayAdapter<>(LoginActivity.this, android.R.layout.simple_spinner_item, states);
                                         stateAppCompatSpinner.setAdapter(arrayAdapter);
                                         createLinearLayout.setVisibility(View.VISIBLE);
                                     }
@@ -792,7 +764,7 @@ public class LoginActivity extends AppCompatActivity {
                         map.put("user_type","client");
                     }
                     map.put("email",emailEditText.getText().toString());
-                    final HashMap<String,Object> result = (HashMap) odooRPC.callOdoo("res.partner","create_anyservice_partner",map);
+                    final HashMap<String,Object> result = (HashMap<String, Object>) odooRPC.callOdoo("res.partner","create_anyservice_partner",map);
                     if(result.get("result").equals("Success")) {
                         uid=result.get("login").toString();
                         SharedPreferences sp = getApplicationContext().getSharedPreferences("odoologin", Context.MODE_PRIVATE);
@@ -855,8 +827,7 @@ public class LoginActivity extends AppCompatActivity {
                 runOnUiThread(new Runnable() {
                     @Override
                     public void run() {
-                        if (true)
-                            slideUp(views[0],views[1],views[2]);
+                        slideUp(views[0],views[1],views[2]);
                     }
                 });
 
@@ -945,12 +916,18 @@ public class LoginActivity extends AppCompatActivity {
         if (requestCode == COMPANY_LOGO && resultCode == Activity.RESULT_OK && data!=null){
             Uri selectedImage = data.getData();
             String[] filePathColumn = { MediaStore.Images.Media.DATA };
-            Cursor cursor = getContentResolver().query(selectedImage,filePathColumn, null, null, null);
-            cursor.moveToFirst();
-            int columnIndex = cursor.getColumnIndex(filePathColumn[0]);
-            String picturePath = cursor.getString(columnIndex);
-            cursor.close();
-            companylogoImageView.setImageBitmap(BitmapFactory.decodeFile(picturePath));
+            Cursor cursor = null;
+            if (selectedImage != null) {
+                cursor = getContentResolver().query(selectedImage,filePathColumn, null, null, null);
+            }
+            if (cursor != null) {
+                cursor.moveToFirst();
+                int columnIndex = 0;
+                columnIndex = cursor.getColumnIndex(filePathColumn[0]);
+                String picturePath = cursor.getString(columnIndex);
+                cursor.close();
+                companylogoImageView.setImageBitmap(BitmapFactory.decodeFile(picturePath));
+            }
         }
         if (requestCode == IMAGE_AADHAR_FRONT_CODE && resultCode == Activity.RESULT_OK)
         {
@@ -968,8 +945,8 @@ public class LoginActivity extends AppCompatActivity {
                     aadharfrontImageView.setImageBitmap(photo);
                 }
                 imageFront = true;
-            }catch(Exception e){
-
+            }catch(Exception e) {
+                e.printStackTrace();
             }
         }
         else if (requestCode == IMAGE_AADHAR_BACK_CODE && resultCode == Activity.RESULT_OK)
@@ -988,8 +965,8 @@ public class LoginActivity extends AppCompatActivity {
                     aadharbackImageView.setImageBitmap(photo);
                 }
                 imageBack = true;
-            }catch (Exception e){
-
+            }catch (Exception e) {
+                e.printStackTrace();
             }
         }
         // Result returned from launching the Intent from GoogleSignInClient.getSignInIntent(...);
