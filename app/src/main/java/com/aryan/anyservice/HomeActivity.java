@@ -2,6 +2,7 @@ package com.aryan.anyservice;
 
 import android.Manifest;
 import android.annotation.SuppressLint;
+import android.app.ActivityManager;
 import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
@@ -13,7 +14,6 @@ import android.location.Location;
 import android.os.AsyncTask;
 import android.os.Build;
 import android.os.Bundle;
-import android.util.Log;
 import android.view.View;
 import android.widget.ArrayAdapter;
 import android.widget.ProgressBar;
@@ -47,17 +47,28 @@ import helper.OdooRPC;
 public class HomeActivity extends AppCompatActivity {
     AppCompatSpinner locationSpinner;
     final int PLACE_AUTOCOMPLETE_REQUEST_CODE = 1011;
+    final int WALLET_UPDATE=151;
     GoogleApiClient googleApiClient;
     boolean app_startup = true;
+    String uid;
     ProgressBar locationProgressBar;
-    TextView refreshTextView;
+    TextView refreshTextView,userprofileTextView,wallet;
 
     OdooRPC odooRPC;
 
     @Override
     public void onBackPressed() {
         moveTaskToBack(true);
-//        super.onBackPressed();
+    }
+
+    private boolean isMyServiceRunning(Class<?> serviceClass) {
+        ActivityManager manager = (ActivityManager) getSystemService(Context.ACTIVITY_SERVICE);
+        for (ActivityManager.RunningServiceInfo service : manager.getRunningServices(Integer.MAX_VALUE)) {
+            if (serviceClass.getName().equals(service.service.getClassName())) {
+                return true;
+            }
+        }
+        return false;
     }
 
     @Override
@@ -66,11 +77,13 @@ public class HomeActivity extends AppCompatActivity {
         setContentView(R.layout.activity_home);
 
         requestPermission();
+        if(!isMyServiceRunning(NotifyService.class)) {
 
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            startForegroundService(new Intent(HomeActivity.this, NotifyService.class));
-        } else {
-            startService(new Intent(HomeActivity.this, NotifyService.class));
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                startForegroundService(new Intent(HomeActivity.this, NotifyService.class));
+            } else {
+                startService(new Intent(HomeActivity.this, NotifyService.class));
+            }
         }
 
 
@@ -81,14 +94,33 @@ public class HomeActivity extends AppCompatActivity {
             actionBar.setDisplayOptions(ActionBar.DISPLAY_SHOW_CUSTOM
                     | ActionBar.DISPLAY_SHOW_HOME);
             locationSpinner = actionBar.getCustomView().findViewById(R.id.location_spinner);
-            TextView profile = actionBar.getCustomView().findViewById(R.id.user_icon_textview);
+            locationSpinner.setEnabled(false);
+            locationSpinner.setClickable(false);
+            userprofileTextView = actionBar.getCustomView().findViewById(R.id.user_icon_textview);
             refreshTextView = actionBar.getCustomView().findViewById(R.id.refresh_icon_textview);
             locationProgressBar = actionBar.getCustomView().findViewById(R.id.refresh_progress);
+            wallet = actionBar.getCustomView().findViewById(R.id.wallet);
+            wallet.setOnClickListener(new View.OnClickListener() {
+                @Override
+                public void onClick(View v) {
+                    Intent intent =new Intent(getApplicationContext(), WalletActivity.class);
+                    startActivityForResult(intent,WALLET_UPDATE);
 
-//        String[] city = {"New Delhi"};
-//        ArrayAdapter arrayAdapter = new ArrayAdapter(HomeActivity.this, R.layout.spinner_item, city);
-//        arrayAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
-//        locationSpinner.setAdapter(arrayAdapter);
+                }
+            });
+            userprofileTextView.setOnClickListener(new View.OnClickListener() {
+                @Override
+                public void onClick(View v) {
+                    runOnUiThread(new Runnable() {
+                        @Override
+                        public void run() {
+                            Intent intent=new Intent(getApplicationContext(),ProfileActivity.class);
+                            startActivity(intent);
+                        }
+                    });
+                }
+            });
+
 
             refreshTextView.setOnClickListener(new View.OnClickListener() {
                 @Override
@@ -112,32 +144,26 @@ public class HomeActivity extends AppCompatActivity {
                 }
             });
 
-            profile.setOnClickListener(new View.OnClickListener() {
-                @Override
-                public void onClick(View v) {
-
-                }
-            });
         }
-
-//        locationSpinner.setOnTouchListener(new View.OnTouchListener() {
-//            @Override
-//            public boolean onTouch(View v, MotionEvent event) {
-//
-//                return true;
-//            }
-//        });
 
 
         BottomNavigationView navView = findViewById(R.id.nav_view);
-        // Passing each menu ID as a set of Ids because each
-        // menu should be considered as top level destinations.
         AppBarConfiguration appBarConfiguration = new AppBarConfiguration.Builder(
                 R.id.navigation_home, R.id.navigation_dashboard, R.id.navigation_notifications)
                 .build();
         NavController navController = Navigation.findNavController(this, R.id.nav_host_fragment);
         NavigationUI.setupActionBarWithNavController(this, navController, appBarConfiguration);
         NavigationUI.setupWithNavController(navView, navController);
+        if(uid==null) {
+            SharedPreferences sp = getApplicationContext().getSharedPreferences("odoologin", Context.MODE_PRIVATE);
+            uid = sp.getString("login", null);
+        }
+        HashMap map = new HashMap<String,String>();
+        map.put("method","get_user_details");
+        map.put("model","res.partner");
+        map.put("login",uid);
+        AsyncOdooRPCcall task = new AsyncOdooRPCcall();
+        task.execute(map);
 
     }
 
@@ -146,13 +172,7 @@ public class HomeActivity extends AppCompatActivity {
         Geocoder geocoder;
         geocoder = new Geocoder(this, Locale.getDefault());
         if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED && ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
-            // TODO: Consider calling
-            //    ActivityCompat#requestPermissions
-            // here to request the missing permissions, and then overriding
-            //   public void onRequestPermissionsResult(int requestCode, String[] permissions,
-            //                                          int[] grantResults)
-            // to handle the case where the user grants the permission. See the documentation
-            // for ActivityCompat#requestPermissions for more details.
+
             return;
         }
         Location mLastLocation = LocationServices.FusedLocationApi.getLastLocation(googleApiClient);
@@ -161,19 +181,19 @@ public class HomeActivity extends AppCompatActivity {
                 final List<Address> addresses = geocoder.getFromLocation(mLastLocation.getLatitude(), mLastLocation.getLongitude(), 1); // Here 1 represent max location result to returned, by documents it recommended 1 to 5
                 String address = addresses.get(0).getAddressLine(0); // If any additional address line present than only, check with max available address lines by getMaxAddressLineIndex()
 
-                SharedPreferences sp = getApplicationContext().getSharedPreferences("odoologin", Context.MODE_PRIVATE);
-                String uid = sp.getString("login",null);
 
+                if(uid==null) {
+                    SharedPreferences sp = getApplicationContext().getSharedPreferences("odoologin", Context.MODE_PRIVATE);
+                    uid = sp.getString("login", null);
+                }
                 HashMap map = new HashMap<String,String>();
                 map.put("method","update_location");
                 map.put("login",uid);
                 map.put("place",address);
                 map.put("lat",mLastLocation.getLatitude());
                 map.put("long",mLastLocation.getLongitude());
-//                final HashMap<String,Object> result = (HashMap) odooRPC.callOdoo("res.partner","update_location",map);
                 final HashMap<String,Object> result = (HashMap<String, Object>) new AsyncOdooRPCcall().execute(map).get();
 
-//                Toast.makeText(HomeActivity.this, address, Toast.LENGTH_LONG).show();
                 runOnUiThread(new Runnable() {
                     @Override
                     public void run() {
@@ -182,7 +202,6 @@ public class HomeActivity extends AppCompatActivity {
                             arrayList.add(value.getAddressLine(0).toString());
                         }
                         ArrayAdapter<String> arrayAdapter = new ArrayAdapter<>(HomeActivity.this, R.layout.spinner_item, arrayList);
-//                    arrayAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
                         locationSpinner.setAdapter(arrayAdapter);
                         refreshTextView.setVisibility(View.VISIBLE);
                         locationProgressBar.setVisibility(View.GONE);
@@ -190,13 +209,9 @@ public class HomeActivity extends AppCompatActivity {
 
                     }
                 });
-//            String city = addresses.get(0).getLocality();
-//            String state = addresses.get(0).getAdminArea();
-//            String country = addresses.get(0).getCountryName();
-//            String postalCode = addresses.get(0).getPostalCode();
-//            String knownName = addresses.get(0).getFeatureName();
-            }catch (Exception e){
 
+            }catch (Exception e) {
+                e.printStackTrace();
             }
 
         }
@@ -209,13 +224,7 @@ public class HomeActivity extends AppCompatActivity {
                         @Override
                         public void onConnected(@Nullable Bundle bundle) {
                             if (ActivityCompat.checkSelfPermission(HomeActivity.this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED && ActivityCompat.checkSelfPermission(HomeActivity.this, Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
-                                // TODO: Consider calling
-                                //    ActivityCompat#requestPermissions
-                                // here to request the missing permissions, and then overriding
-                                //   public void onRequestPermissionsResult(int requestCode, String[] permissions,
-                                //                                          int[] grantResults)
-                                // to handle the case where the user grants the permission. See the documentation
-                                // for ActivityCompat#requestPermissions for more details.
+                                requestPermission();
                                 return;
                             }
                             if(app_startup) {
@@ -244,7 +253,6 @@ public class HomeActivity extends AppCompatActivity {
 
     private void requestPermission() {
 
-//Check whether our app has the fine location permission, and request it if necessary//
 
         if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED || ActivityCompat.checkSelfPermission(HomeActivity.this, Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
@@ -255,7 +263,6 @@ public class HomeActivity extends AppCompatActivity {
         }
     }
 
-//Handle the result of the permission request//
 
     @Override
     public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
@@ -287,8 +294,17 @@ public class HomeActivity extends AppCompatActivity {
                 String method = (String) hashMaps[0].get("method");
                 hashMaps[0].remove("method");
                 result = (HashMap<String, Object>) odooRPC.callOdoo("res.partner", method, hashMaps[0]);
+                if (method.equals("get_user_details") && result!=null) {
+                    final HashMap<String, Object> finalResult = result;
+                    runOnUiThread(new Runnable() {
+                        @Override
+                        public void run() {
+                            wallet.setText(String.format("%s %s", getResources().getString(R.string.icon_wallet), String.valueOf(finalResult.get("balance"))));
+                        }
+                    });
+
+                }
             }catch (Exception e){
-                Log.e("ODOO RPC :",e.getMessage());
 
                 runOnUiThread(new Runnable() {
                     @Override
@@ -311,5 +327,18 @@ public class HomeActivity extends AppCompatActivity {
             }
             return result;
         }
+    }
+    @Override
+    public void onActivityResult(int requestCode, int resultCode, Intent data) {
+        if (resultCode == WALLET_UPDATE || requestCode == 121) {
+
+            HashMap map = new HashMap<String,String>();
+            map.put("method","get_user_details");
+            map.put("model","res.partner");
+            map.put("login",uid);
+            AsyncOdooRPCcall task = new AsyncOdooRPCcall();
+            task.execute(map);
+        }
+        super.onActivityResult(requestCode, resultCode, data);
     }
 }

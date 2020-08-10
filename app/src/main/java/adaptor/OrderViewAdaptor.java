@@ -3,23 +3,16 @@ package adaptor;
 import android.content.Context;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
-import android.media.Image;
 import android.util.Base64;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.ArrayAdapter;
-import android.widget.Button;
-import android.widget.CheckBox;
-import android.widget.CompoundButton;
 import android.widget.ImageView;
-import android.widget.LinearLayout;
-import android.widget.RatingBar;
 import android.widget.TextView;
 
 import com.aryan.anyservice.R;
 
-import java.text.SimpleDateFormat;
 import java.util.List;
 
 import androidx.annotation.NonNull;
@@ -63,18 +56,18 @@ public class OrderViewAdaptor extends ArrayAdapter<Order> {
                 desc.setVisibility(View.VISIBLE);
 
             }
-            if(p.getOrderDate()!=null) date.setText(new SimpleDateFormat("EEE, dd MMM yyyy").format(p.getOrderDate()));
+            if(p.getOrderDate()!=null) date.setText(p.getOrderDate());
             if(uid==p.getAgentID()){
-                displayName.setText("Customer - "+p.getCustName());
+                displayName.setText(String.format("Customer - %s", p.getCustName()));
             }else{
-                displayName.setText("Agent - "+p.getAgentName());
+                displayName.setText(String.format("Agent - %s", p.getAgentName()));
             }
             try {
                 byte[] decodedString = Base64.decode(p.getIcon(), Base64.DEFAULT);
                 Bitmap decodedBitmap = BitmapFactory.decodeByteArray(decodedString, 0, decodedString.length);
                 icon.setImageBitmap(decodedBitmap);
-            }catch(Exception e){
-
+            }catch(Exception e) {
+                e.printStackTrace();
             }
         }
         return v;

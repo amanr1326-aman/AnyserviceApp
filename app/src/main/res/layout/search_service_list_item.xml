@@ -7,9 +7,9 @@
     android:orientation="horizontal">
     <androidx.appcompat.widget.AppCompatImageView
         android:id="@+id/service_icon"
-        android:layout_width="100dp"
+        android:layout_width="80dp"
         android:layout_gravity="center"
-        android:layout_height="100dp"
+        android:layout_height="80dp"
         android:layout_margin="2dp"
         android:src="@mipmap/any_service_icon_round"/>
     <LinearLayout
@@ -22,14 +22,35 @@
             android:layout_width="fill_parent"
             android:layout_height="wrap_content"
             android:orientation="horizontal">
-            <androidx.appcompat.widget.AppCompatTextView
-                android:id="@+id/service_company"
-                style="@style/TextAppearance.AppCompat.Large"
-                android:layout_width="0dp"
-                android:textColor="@color/common_google_signin_btn_text_light"
+            <LinearLayout
                 android:layout_weight="5"
-                android:layout_margin="2dp"
-                android:layout_height="wrap_content"/>
+                android:layout_width="0dp"
+                android:layout_height="wrap_content">
+                <FrameLayout
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content">
+                    <androidx.appcompat.widget.AppCompatTextView
+                        android:id="@+id/service_company"
+                        style="@style/TextAppearance.AppCompat.Medium"
+                        android:layout_width="wrap_content"
+                        android:textColor="#000"
+                        android:textStyle="bold"
+                        android:paddingEnd="13dp"
+                        android:layout_height="wrap_content"/>
+
+                    <ImageView
+                        android:id="@+id/verified"
+                        android:visibility="gone"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="5dp"
+                        android:layout_gravity="top|right"
+                        android:src="@drawable/ic_baseline_verified"
+                        />
+
+                </FrameLayout>
+
+            </LinearLayout>
             <androidx.appcompat.widget.AppCompatRatingBar
                 android:id="@+id/service_rating"
                 android:layout_width="wrap_content"

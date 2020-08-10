@@ -1,20 +1,51 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:orientation="vertical"
     tools:context=".ui.home.HomeFragment">
 
-
-    <TextView
-        android:id="@+id/text_home"
+    <ProgressBar
+        android:id="@+id/main_progress"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:textColor="@color/colorAccent"
-        android:textSize="15sp"
-        android:layout_gravity="right" />
+        android:layout_gravity="center_horizontal" />
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:paddingVertical="2dp"
+        android:visibility="gone"
+        android:layout_marginHorizontal="15dp"
+        android:orientation="horizontal">
+        <helper.IconTextView
+            android:id="@+id/wallet"
+            android:textAppearance="@style/TextAppearance.AppCompat.Small"
+            android:layout_width="wrap_content"
+            android:padding="2dp"
+            android:textColor="@color/colorWhite"
+            android:background="@drawable/round_button"
+            android:layout_height="wrap_content"
+            android:text="@string/icon_wallet"/>
+        <TextView
+            android:id="@+id/text_home"
+            android:layout_weight="1"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:textColor="@color/colorAccent"
+            android:textSize="15sp"
+            android:gravity="end" />
+
+    </LinearLayout>
+
+    <TextView
+        android:visibility="gone"
+        android:layout_marginHorizontal="10dp"
+        android:id="@+id/warning"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="@string/please_pay_bill_if_due_amount_100_otherwise_your_account_may_be_blocked"/>
+
     <LinearLayout
         android:id="@+id/customer_layout"
         android:visibility="gone"
@@ -29,30 +60,28 @@
             android:singleLine="true"
             android:background="@drawable/rounded_edittext"
             android:padding="10dp"
-            android:layout_marginTop="15dp"
             android:layout_marginHorizontal="15dp"
             android:layout_height="wrap_content"
-            android:drawableEnd="@drawable/ic_action_search"
-            android:drawableRight="@drawable/ic_action_search" />
+            android:drawableEnd="@drawable/ic_action_search" />
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginLeft="15dp"
-            android:layout_marginRight="15dp"
+            android:layout_marginHorizontal="15dp"
+            android:layout_marginVertical="2dp"
             android:orientation="horizontal">
             <helper.IconTextView
                 android:id="@+id/user_icon_textview"
                 android:layout_width="0dp"
-                android:layout_weight="1"
+                android:layout_weight="0.1"
                 android:padding="0dp"
                 style="@style/Widget.AppCompat.Button.Borderless"
                 android:text="@string/icon_filter"
                 android:layout_gravity="center_vertical"
                 android:clickable="false"
-                android:layout_height="wrap_content"/>
+                android:layout_height="35dp"/>
             <androidx.appcompat.widget.AppCompatSpinner
                 android:id="@+id/categories_spinner"
-                android:layout_weight="5"
+                android:layout_weight="0.5"
                 android:layout_gravity="center_vertical"
                 android:layout_width="0dp"
                 android:spinnerMode="dialog"
@@ -60,68 +89,135 @@
             <helper.IconTextView
                 android:id="@+id/distance_icon_textview"
                 android:layout_width="0dp"
-                android:layout_weight="1"
+                android:layout_weight="0.1"
                 android:padding="0dp"
                 style="@style/Widget.AppCompat.Button.Borderless"
                 android:text="@string/icon_distance"
                 android:layout_gravity="center_vertical"
-                android:layout_height="wrap_content"/>
+                android:layout_height="35dp"/>
 
         </LinearLayout>
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginHorizontal="15dp"
+            android:layout_marginVertical="2dp"
+            android:orientation="horizontal">
+            <helper.IconTextView
+                android:layout_width="30dp"
+                android:padding="0dp"
+                style="@style/Widget.AppCompat.Button.Borderless"
+                android:text="@string/icon_sortby"
+                android:layout_gravity="center_vertical"
+                android:clickable="false"
+                android:layout_height="35dp"/>
+            <TextView
+                android:layout_width="wrap_content"
+                android:padding="0dp"
+                android:text="@string/sort_by"
+                android:layout_gravity="center_vertical"
+                android:layout_height="wrap_content"/>
+            <androidx.appcompat.widget.AppCompatSpinner
+                android:id="@+id/sort_spinner"
+                android:layout_weight="1"
+                android:layout_gravity="center_vertical"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"/>
+            <RadioGroup
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_gravity="center_vertical"
+                android:divider="@color/colorAccent"
+                android:showDividers="middle"
+                android:orientation="horizontal">
+                <RadioButton
+                    android:id="@+id/product_radio"
+                    android:button="@drawable/product_radio"
+                    android:checked="true"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"/>
+
+                <RadioButton
+                    android:id="@+id/service_radio"
+                    android:button="@drawable/service_radio"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"/>
+            </RadioGroup>
+        </LinearLayout>
+        <ProgressBar
+            android:id="@+id/progress"
+            style="@android:style/Widget.DeviceDefault.Light.ProgressBar.Small"
+            android:visibility="gone"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center_horizontal" />
         <ListView
             android:id="@+id/services_listview"
+            android:visibility="gone"
             android:layout_width="match_parent"
+            android:layout_marginHorizontal="5dp"
+            android:layout_marginBottom="60dp"
+            android:layout_height="fill_parent"/>
+        <ListView
+            android:id="@+id/product_listview"
+            android:layout_width="match_parent"
+            android:layout_marginHorizontal="5dp"
             android:layout_marginBottom="60dp"
             android:layout_height="fill_parent"/>
     </LinearLayout>
-    <LinearLayout
+    <ScrollView
         android:id="@+id/seller_layout"
         android:visibility="gone"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginBottom="60dp"
-        android:orientation="vertical">
+        android:layout_marginBottom="60dp">
         <LinearLayout
             android:layout_width="match_parent"
-            android:layout_gravity="center"
-            android:layout_margin="20dp"
-            android:layout_height="wrap_content">
-            <helper.IconTextView
-                android:id="@+id/services"
-                android:background="@drawable/round_button"
-                android:layout_width="0dp"
-                android:layout_weight="1"
-                android:layout_gravity="center"
-                android:textSize="15sp"
-                android:layout_marginRight="20dp"
-                android:textStyle="bold"
-                android:text="@string/services"
-                android:textColor="@color/colorWhite"
-                android:layout_height="@dimen/nav_header_height"
-                android:layout_marginEnd="20dp" />
-            <helper.IconTextView
-                android:id="@+id/distance"
-                android:background="@drawable/round_button"
-                android:layout_width="0dp"
-                android:layout_gravity="center"
-                android:layout_weight="1"
-                android:text="@string/distance"
-                android:textSize="15sp"
-                android:textStyle="bold"
-                android:textColor="@color/colorWhite"
-                android:layout_height="@dimen/nav_header_height"/>
-        </LinearLayout>
-        <androidx.appcompat.widget.SwitchCompat
-            android:layout_margin="20dp"
-            android:id="@+id/active"
-            android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="@string/online"/>
-        <androidx.drawerlayout.widget.DrawerLayout
-            android:id="@+id/scanner"
-            android:layout_width="300dp"
-            android:layout_height="300dp"
-            android:background="@drawable/scanning_gradient"
-            android:layout_gravity="center"/>
-    </LinearLayout>
+            android:orientation="vertical">
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_gravity="center"
+                android:layout_margin="20dp"
+                android:layout_height="wrap_content">
+                <helper.IconTextView
+                    android:id="@+id/services"
+                    android:background="@drawable/round_button"
+                    android:layout_width="0dp"
+                    android:layout_weight="1"
+                    android:layout_gravity="center"
+                    android:textSize="15sp"
+                    android:layout_marginRight="20dp"
+                    android:textStyle="bold"
+                    android:text="@string/services"
+                    android:textColor="@color/colorWhite"
+                    android:layout_height="@dimen/nav_header_height"
+                    android:layout_marginEnd="20dp" />
+                <helper.IconTextView
+                    android:id="@+id/distance"
+                    android:background="@drawable/round_button"
+                    android:layout_width="0dp"
+                    android:layout_gravity="center"
+                    android:layout_weight="1"
+                    android:text="@string/distance"
+                    android:textSize="15sp"
+                    android:textStyle="bold"
+                    android:textColor="@color/colorWhite"
+                    android:layout_height="@dimen/nav_header_height"/>
+            </LinearLayout>
+            <androidx.appcompat.widget.SwitchCompat
+                android:layout_margin="20dp"
+                android:id="@+id/active"
+                android:checked="false"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/online"/>
+            <androidx.drawerlayout.widget.DrawerLayout
+                android:id="@+id/scanner"
+                android:layout_width="300dp"
+                android:layout_height="300dp"
+                android:background="@drawable/scanning_gradient"
+                android:layout_gravity="center"/>
+        </LinearLayout>
+    </ScrollView>
 </LinearLayout>

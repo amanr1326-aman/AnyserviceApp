@@ -4,15 +4,12 @@ import android.content.Context;
 import android.content.SharedPreferences;
 import android.os.AsyncTask;
 import android.widget.ProgressBar;
-import android.widget.Toast;
 
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
-import java.util.concurrent.ExecutionException;
 
 import androidx.lifecycle.LiveData;
 import androidx.lifecycle.MutableLiveData;
@@ -24,16 +21,19 @@ import helper.ServiceDetails;
 public class HomeViewModel extends ViewModel {
 
     private MutableLiveData<String> mText;
+    private MutableLiveData<Double> walletamount;
     private MutableLiveData<Boolean> isAgent;
     private MutableLiveData<Boolean> activeAgent;
     private MutableLiveData<String> toastText;
 
-    public void setRadius(int radius) {
+    public void setRadius(int radius,boolean unlimited_distance,double deliverycharge) {
         HashMap map = new HashMap<String,String>();
         map.put("method","update_user_details");
         map.put("model","res.partner");
         map.put("login",uid);
         map.put("radius",radius);
+        map.put("unlimted_distance",unlimited_distance);
+        map.put("unlimted_distance_charge",deliverycharge);
         AsyncOdooRPCcall task = new AsyncOdooRPCcall();
         task.execute(map);
         this.radius.postValue(radius);
@@ -50,6 +50,17 @@ public class HomeViewModel extends ViewModel {
     }
 
     private MutableLiveData<Integer> radius;
+
+    public MutableLiveData<Double> getDeliveryCharge() {
+        return deliveryCharge;
+    }
+
+    public MutableLiveData<Boolean> getUnlimitedDistance() {
+        return unlimitedDistance;
+    }
+
+    private MutableLiveData<Double> deliveryCharge;
+    private MutableLiveData<Boolean> unlimitedDistance;
     private MutableLiveData<List> categories;
     private MutableLiveData<List<ServiceDetails>> services;
     OdooRPC odooRPC;
@@ -61,9 +72,12 @@ public class HomeViewModel extends ViewModel {
         isAgent = new MutableLiveData<>();
         activeAgent = new MutableLiveData<>();
         radius = new MutableLiveData<>();
+        unlimitedDistance = new MutableLiveData<>();
+        deliveryCharge = new MutableLiveData<>();
         categories = new MutableLiveData<>();
         services = new MutableLiveData<>();
         toastText = new MutableLiveData<>();
+        walletamount = new MutableLiveData<>();
     }
 
     public LiveData<String> getText(Context context) {
@@ -94,12 +108,15 @@ public class HomeViewModel extends ViewModel {
     }
 
 
-    public void updateServices(HashMap<String,String> hashMap){
+    public void updateServices(HashMap<String,String> hashMap,int offset,int limit,String order){
 
         HashMap map = new HashMap<String,String>();
         map.put("method","search_services");
         map.put("model","res.partner");
         map.put("login",uid);
+        map.put("offset",offset);
+        map.put("limit",limit);
+        map.put("order",order);
         for (Map.Entry<String,String> entry:hashMap.entrySet()) {
             map.put(entry.getKey(),entry.getValue());
         }
@@ -129,6 +146,12 @@ public class HomeViewModel extends ViewModel {
         return activeAgent;
     }
 
+    public MutableLiveData<Double> getWalletamount() {
+        return walletamount;
+    }
+
+
+
     class AsyncOdooRPCcall extends AsyncTask<HashMap<String,Object>, ProgressBar,HashMap<String,Object>> {
 
         @Override
@@ -145,6 +168,7 @@ public class HomeViewModel extends ViewModel {
                 }
                 String method = (String) hashMaps[0].get("method");
                 String model = (String) hashMaps[0].get("model");
+
                 hashMaps[0].remove("method");
                 hashMaps[0].remove("model");
                 result = (HashMap) odooRPC.callOdoo(model, method, hashMaps[0]);
@@ -157,8 +181,11 @@ public class HomeViewModel extends ViewModel {
 
                     } else if (method.equals("get_user_details")) {
                         mText.postValue("Welcome " + result.get("name").toString());
+                        walletamount.postValue(Double.parseDouble(String.valueOf(result.get("balance"))));
+                        deliveryCharge.postValue(Double.parseDouble(String.valueOf(result.get("delivery_charge"))));
                         isAgent.postValue((Boolean) result.get("agent"));
                         activeAgent.postValue((Boolean) result.get("active"));
+                        unlimitedDistance.postValue((Boolean) result.get("unlimted_distance"));
                         radius.postValue(Integer.valueOf(String.valueOf(result.get("radius"))));
 
                     } else if (method.equals("search_services")) {
@@ -170,10 +197,14 @@ public class HomeViewModel extends ViewModel {
                             serviceDetails.setId(Integer.parseInt(String.valueOf(service.get("id"))));
                             serviceDetails.setAgent_id(Integer.parseInt(String.valueOf(service.get("agent_id"))));
                             serviceDetails.setCompany(service.get("company"));
+                            serviceDetails.setVerified(Boolean.parseBoolean(String.valueOf(service.get("verified"))));
                             serviceDetails.setName(service.get("name"));
                             serviceDetails.setCategory(service.get("category"));
                             serviceDetails.setPrice(Double.parseDouble(String.valueOf(service.get("price"))));
                             serviceDetails.setDeliveryCost(Double.parseDouble(String.valueOf(service.get("charge"))));
+                            serviceDetails.setBalance(Double.parseDouble(String.valueOf(service.get("balance"))));
+                            serviceDetails.setMeasurable(Boolean.parseBoolean(String.valueOf(service.get("is_measurable"))));
+                            serviceDetails.setDescription(String.valueOf(service.get("description")));
                             if (service.get("rating") != null) {
                                 Object rating = service.get("rating");
                                 serviceDetails.setRating(Float.parseFloat(rating.toString()));
@@ -183,7 +214,8 @@ public class HomeViewModel extends ViewModel {
                                 serviceDetails.setIcon(service.get("image"));
                             list.add(serviceDetails);
                         }
-                        services.postValue(list);
+                            services.postValue(list);
+
 
                     } else if (method.equals("update_user_details")) {
                         toastText.postValue("Updated successfully");

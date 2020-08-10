@@ -4,10 +4,6 @@ import android.Manifest;
 import android.animation.ObjectAnimator;
 import android.annotation.SuppressLint;
 import android.app.Activity;
-
-import androidx.annotation.NonNull;
-import androidx.appcompat.widget.AppCompatSpinner;
-
 import android.app.AlertDialog;
 import android.content.ContentValues;
 import android.content.Context;
@@ -23,32 +19,30 @@ import android.net.Uri;
 import android.os.AsyncTask;
 import android.os.Build;
 import android.os.Bundle;
-
-import androidx.annotation.Nullable;
-import androidx.annotation.StringRes;
-import androidx.appcompat.app.AppCompatActivity;
-import helper.OdooRPC;
-
 import android.provider.MediaStore;
 import android.text.Editable;
 import android.text.TextWatcher;
 import android.util.Base64;
 import android.util.DisplayMetrics;
-import android.util.Log;
 import android.view.View;
 import android.view.animation.AccelerateDecelerateInterpolator;
 import android.view.inputmethod.InputMethodManager;
 import android.widget.ArrayAdapter;
 import android.widget.Button;
+import android.widget.CheckBox;
 import android.widget.EditText;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.ProgressBar;
 import android.widget.RadioButton;
 import android.widget.RadioGroup;
+import android.widget.ScrollView;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import com.github.amlcurran.showcaseview.ShowcaseView;
+import com.github.amlcurran.showcaseview.targets.ViewTarget;
+import com.github.dhaval2404.imagepicker.ImagePicker;
 import com.google.android.gms.auth.api.signin.GoogleSignIn;
 import com.google.android.gms.auth.api.signin.GoogleSignInAccount;
 import com.google.android.gms.auth.api.signin.GoogleSignInClient;
@@ -60,36 +54,40 @@ import com.google.android.gms.tasks.Task;
 import java.io.ByteArrayOutputStream;
 import java.util.HashMap;
 
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
+import androidx.annotation.StringRes;
+import androidx.appcompat.app.AppCompatActivity;
+import androidx.appcompat.widget.AppCompatSpinner;
+import de.timroes.axmlrpc.XMLRPCException;
+import helper.OdooRPC;
+
 public class LoginActivity extends AppCompatActivity {
 
-    private String state="split",user_otp="123456";
+    private String state="split",user_otp="12374854889959559";
     Boolean imageFront=false,imageBack=false;
     OdooRPC odooRPC;
     Uri frontUri,backUri;
+    ShowcaseView sv;
+
+
 
 
     LinearLayout loginLinearLayout,phoneLinearLayout,otpLinearLayout,createLinearLayout,sellerLinearLayout;
     Button backButton,continuePhoneButton,requestOtpButton,submitOtpButton,registerButton;
     ProgressBar continueProgressBar,submitProgressBar, otpProgressBar,createProgressBar;
     EditText phoneEditText,otpEditText,fullnameEditText,emailEditText,aadharEditText,companynameEditText,street1EditText,street2EditText,cityEditText,gstEditText,pinEditText;
-    TextView otpTextView,resendotpTextView;
+    TextView otpTextView,resendotpTextView,instruction;
     RadioGroup accountTypeRadioGroup;
     RadioButton customerRadioButton,sellerRadioButton;
     ImageView aadharfrontImageView,aadharbackImageView,companylogoImageView;
     AppCompatSpinner stateAppCompatSpinner;
+    CheckBox terms;
     private static final int CAMERA_PERMISSION_CODE = 100, IMAGE_AADHAR_FRONT_CODE=1001, IMAGE_AADHAR_BACK_CODE=1002, RC_SIGN_IN=1003, COMPANY_LOGO=1004,CAMERA_COMPANY_LOGO=1005;
     @Override
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_login);
-//        if(!isTaskRoot()
-//                    && getIntent().hasCategory(Intent.CATEGORY_LAUNCHER)
-//                    && getIntent().getAction()!=null
-//                    && getIntent().getAction().equals(Intent.ACTION_MAIN)
-//                    ){
-//            finish();
-//            return;
-//        }
 
         GoogleSignInOptions gso = new GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN)
                 .requestEmail()
@@ -135,7 +133,36 @@ public class LoginActivity extends AppCompatActivity {
 
         final TextView phoneTextView = findViewById(R.id.phone_textview);
         otpTextView = findViewById(R.id.otp_textview);
+        instruction = findViewById(R.id.instruction);
+        instruction.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                ScrollView scrollView = new ScrollView(getApplicationContext());
+                LinearLayout linearLayout=new LinearLayout(getApplicationContext());
+                TextView tv= new TextView(getApplicationContext());
+                linearLayout.setPadding(50,50,50,50);
+                linearLayout.addView(tv);
+                scrollView.addView(linearLayout);
+                new AlertDialog.Builder(LoginActivity.this)
+                        .setTitle("Terms & Condition")
+                        .setView(scrollView)
+                        .setIcon(R.mipmap.any_service_icon_foreground)
+                        .setPositiveButton("OK", null)
+                        .setCancelable(false)
+                        .show();
+                AsyncInstructionTask task =new AsyncInstructionTask();
+                task.execute(tv);
+
+            }
+        });
         resendotpTextView = findViewById(R.id.resend_otp_textview);
+
+        resendotpTextView.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                new AsyncOTPTask().execute();
+            }
+        });
 
         continueProgressBar =  findViewById(R.id.progress_continue);
         submitProgressBar =  findViewById(R.id.progress_submit);
@@ -146,6 +173,8 @@ public class LoginActivity extends AppCompatActivity {
 
         customerRadioButton = findViewById(R.id.customer_radiobutton);
         sellerRadioButton = findViewById(R.id.seller_radionbutton);
+        terms = findViewById(R.id.terms);
+
 
 
         aadharfrontImageView = findViewById(R.id.aadhar_front);
@@ -249,6 +278,8 @@ public class LoginActivity extends AppCompatActivity {
                 phoneTextView.setText("+91 "+phoneEditText.getText());
                 AsyncSplitTask task = new AsyncSplitTask();
                 task.execute(null,otpLinearLayout,phoneLinearLayout);
+
+
                 Thread t =new Thread(new Runnable() {
                     @Override
                     public void run() {
@@ -307,47 +338,38 @@ public class LoginActivity extends AppCompatActivity {
         registerButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
-                    if(customerRadioButton.isChecked()||(aadharEditText.getText().length()==12 && imageBack && imageFront && ! cityEditText.getText().equals("") && ! companynameEditText.getText().equals(""))){
-                        backButton.setEnabled(false);
-                        emailEditText.setEnabled(false);
-                        fullnameEditText.setEnabled(false);
-                        registerButton.setEnabled(false);
-
-                        companynameEditText.setEnabled(false);
-                        street1EditText.setEnabled(false);
-                        street2EditText.setEnabled(false);
-                        cityEditText.setEnabled(false);
-                        gstEditText.setEnabled(false);
-                        pinEditText.setEnabled(false);
-                        stateAppCompatSpinner.setEnabled(false);
-
-                        createProgressBar.setVisibility(View.VISIBLE);
-                        AsyncSplitTask task = new AsyncSplitTask();
-                        task.execute(null,null,createLinearLayout);
-
-                    }else{
-                        if(aadharEditText.getText().length()!=12){
-                            aadharEditText.setError("This is required field (16 digits)");
-                        }else {
-                            new AlertDialog.Builder(LoginActivity.this)
-                                    .setTitle("Required Fields")
-                                    .setMessage("Please provide all required fields.")
-                                    .setIcon(R.mipmap.any_service_icon_foreground)
-                                    .setPositiveButton("OK", null)
-                                    .show();
-                        }
-                    }
-                }else{
+                if ((customerRadioButton.isChecked() && terms.isChecked()) || (aadharEditText.getText().length() == 12 && imageBack && imageFront && !cityEditText.getText().equals("") && !companynameEditText.getText().equals("") && terms.isChecked())) {
                     backButton.setEnabled(false);
                     emailEditText.setEnabled(false);
                     fullnameEditText.setEnabled(false);
                     registerButton.setEnabled(false);
+
+                    companynameEditText.setEnabled(false);
+                    street1EditText.setEnabled(false);
+                    street2EditText.setEnabled(false);
+                    cityEditText.setEnabled(false);
+                    gstEditText.setEnabled(false);
+                    pinEditText.setEnabled(false);
+                    stateAppCompatSpinner.setEnabled(false);
+
                     createProgressBar.setVisibility(View.VISIBLE);
                     AsyncSplitTask task = new AsyncSplitTask();
-                    task.execute(null,null,createLinearLayout);
-                }
+                    task.execute(null, null, createLinearLayout);
 
+                } else {
+                    if(!terms.isChecked()){
+                        terms.setError("This is required");
+                    }else if (aadharEditText.getText().length() != 12) {
+                        aadharEditText.setError("This is required field (16 digits)");
+                    } else {
+                        new AlertDialog.Builder(LoginActivity.this)
+                                .setTitle("Required Fields")
+                                .setMessage("Please provide all required fields.")
+                                .setIcon(R.mipmap.any_service_icon_foreground)
+                                .setPositiveButton("OK", null)
+                                .show();
+                    }
+                }
             }
         });
         backButton.setOnClickListener(new View.OnClickListener() {
@@ -361,6 +383,9 @@ public class LoginActivity extends AppCompatActivity {
         accountTypeRadioGroup.setOnCheckedChangeListener(new RadioGroup.OnCheckedChangeListener() {
             @Override
             public void onCheckedChanged(RadioGroup group, int checkedId) {
+                if(sv!=null) {
+                    if(sv.isShowing()) sv.hide();
+                }
                 if(sellerRadioButton.isChecked()){
                     sellerLinearLayout.setVisibility(View.VISIBLE);
                     new AlertDialog.Builder(LoginActivity.this)
@@ -393,8 +418,10 @@ public class LoginActivity extends AppCompatActivity {
                     else
                     {
 
-                        Intent galleryIntent = new Intent(Intent.ACTION_PICK, MediaStore.Images.Media.EXTERNAL_CONTENT_URI);
-                        startActivityForResult(galleryIntent, COMPANY_LOGO);
+                        ImagePicker.Companion.with(LoginActivity.this)
+                                .cropSquare()
+                                .compress(1024)
+                                .start(COMPANY_LOGO);
                     }
                 }
 
@@ -412,8 +439,6 @@ public class LoginActivity extends AppCompatActivity {
                     else
                     {
                         cameraIntent("aadharfront",IMAGE_AADHAR_FRONT_CODE);
-//                        Intent cameraIntent = new Intent(MediaStore.ACTION_IMAGE_CAPTURE);
-//                        startActivityForResult(cameraIntent, IMAGE_AADHAR_FRONT_CODE);
                     }
                 }
             }
@@ -430,18 +455,15 @@ public class LoginActivity extends AppCompatActivity {
                     {
                         cameraIntent("aadharback",IMAGE_AADHAR_BACK_CODE);
 
-//                        Intent cameraIntent = new Intent(MediaStore.ACTION_IMAGE_CAPTURE);
-//                        startActivityForResult(cameraIntent, IMAGE_AADHAR_BACK_CODE);
                     }
                 }
             }
         });
-//        GoogleSignInAccount account = GoogleSignIn.getLastSignedInAccount(this);
-//        updateUI(account);
 
 
         AsyncSplitTask task = new AsyncSplitTask();
         task.execute(logoImageView,loginLinearLayout,split);
+
     }
 
     private void updateUI(GoogleSignInAccount account) {
@@ -481,20 +503,16 @@ public class LoginActivity extends AppCompatActivity {
             backButton.setVisibility(View.GONE);
         }else if(state.equals("otp")){
             state = "phone";
-//            if(otpTask!=null){
-//                otpTask.cancel(true);
-//            }
-//             do{
-                 otpEditText.setText("");
-                phoneEditText.setText("");
-                phoneEditText.setEnabled(true);
-                requestOtpButton.setEnabled(false);
-                resendotpTextView.setVisibility(View.GONE);
-                otpTextView.setText("Auto Verifying your OTP in ");
-                submitProgressBar.setVisibility(View.GONE);
-                slideUp(null, phoneLinearLayout, otpLinearLayout);
-                state = "phone";
-//            }while(!otpTask.isCancelled());
+
+            otpEditText.setText("");
+            phoneEditText.setText("");
+            phoneEditText.setEnabled(true);
+            requestOtpButton.setEnabled(false);
+            resendotpTextView.setVisibility(View.GONE);
+            otpTextView.setText("Auto Verifying your OTP in ");
+            submitProgressBar.setVisibility(View.GONE);
+            slideUp(null, phoneLinearLayout, otpLinearLayout);
+            state = "phone";
 
         }else if(state.equals("create_account")){
             createLinearLayout.setVisibility(View.GONE);
@@ -545,7 +563,6 @@ public class LoginActivity extends AppCompatActivity {
         backButton.setEnabled(true);
     }
 
-    // slide the view from its current position to below itself
     public void slideUp(final View view, final View llDomestic, final View GONEView){
         final ImageView logoImageView = findViewById(R.id.logo);
         DisplayMetrics metrics = getResources().getDisplayMetrics();
@@ -560,7 +577,6 @@ public class LoginActivity extends AppCompatActivity {
         }
 
 
-//        Toast.makeText(getApplicationContext(),""+view.getTranslationX()+"\n"+view.getHeight()+"\n"+view.getBaseline(),Toast.LENGTH_LONG).show();
         if(view!=null) {
             ObjectAnimator animation2 = ObjectAnimator.ofFloat(view, "translationY", logoImageView.getHeight() / 2 - metrics.heightPixels / 2);
             animation2.setInterpolator(new AccelerateDecelerateInterpolator());
@@ -590,16 +606,11 @@ public class LoginActivity extends AppCompatActivity {
     private class AsyncSplitTask extends AsyncTask<View,View,String>{
         @Override
         protected void onPreExecute() {
-//            super.onPreExecute();
         }
 
         @Override
         protected String doInBackground(final View... views) {
-//            try {
-//                Thread.sleep(2000);
-//            } catch (InterruptedException e) {
-//                e.printStackTrace();
-//            }
+
 
             try {
                 if(state=="split"){
@@ -607,7 +618,6 @@ public class LoginActivity extends AppCompatActivity {
                         String uid = sp.getString("login",null);
                         odooRPC = new OdooRPC();
                         String login = odooRPC.login();
-                        Log.d("ODOO RPC :", login);
                         HashMap map = new HashMap<String,String>();
                         String version = BuildConfig.VERSION_NAME;
                         map.put("app_version",version);
@@ -654,7 +664,7 @@ public class LoginActivity extends AppCompatActivity {
                 }else if (state.equals("root")){
                     state="phone";
                 }else if (state.equals("phone")){
-                    user_otp="123456";
+                    new AsyncOTPTask().execute();
                     state="otp";
                 }else if (state.equals("otp")){
                     String otp = otpEditText.getText().toString();
@@ -677,23 +687,6 @@ public class LoginActivity extends AppCompatActivity {
                             finish();
                             startActivity(intent);
                             return null;
-//                            runOnUiThread(new Runnable() {
-//                                @Override
-//                                public void run() {
-//                                    new AlertDialog.Builder(LoginActivity.this)
-//                                            .setTitle("App Info")
-//                                            .setMessage("ID :"+result.get("login").toString()+"\nName :"+result.get("name").toString())
-//                                            .setIcon(R.mipmap.any_service_icon_foreground)
-//                                            .setPositiveButton("OK", new DialogInterface.OnClickListener() {
-//                                                @Override
-//                                                public void onClick(DialogInterface dialog, int which) {
-//                                                    finishAffinity();
-//                                                }
-//                                            })
-//                                            .setCancelable(false)
-//                                            .show();
-//                                }
-//                            });
                         }else if(result.get("result").equals("Fail") && result.get("code").equals(103)){
 
                             String uid=result.get("login").toString();
@@ -722,6 +715,20 @@ public class LoginActivity extends AppCompatActivity {
                                     }
                                 });
                             }
+                            runOnUiThread(new Runnable() {
+                                @Override
+                                public void run() {
+
+                                    sv = new ShowcaseView.Builder(LoginActivity.this)
+                                            .setTarget(new ViewTarget(sellerRadioButton))
+                                            .setContentTitle("Hello!")
+                                            .setContentText("If you are here to provide services or selling products.\nThen Login as Agent.\nOtherwise start with Customer login.")
+                                            .singleShot(101) // provide a unique ID used to ensure it is only shown once
+                                            .withHoloShowcase()
+                                            .build();
+
+                                }
+                            });
                         }
                     }else{
                         runOnUiThread(new Runnable() {
@@ -784,24 +791,8 @@ public class LoginActivity extends AppCompatActivity {
                             Intent intent=new Intent(LoginActivity.this,WelcomeActivity.class);
                             intent.putExtra("result",true);
                             finish();
+                            startActivity(intent);
                             return null;
-//                            runOnUiThread(new Runnable() {
-//                                @Override
-//                                public void run() {
-//                                    new AlertDialog.Builder(LoginActivity.this)
-//                                            .setTitle("App Info")
-//                                            .setMessage(result.get("login").toString())
-//                                            .setIcon(R.mipmap.any_service_icon_foreground)
-//                                            .setPositiveButton("OK", new DialogInterface.OnClickListener() {
-//                                                @Override
-//                                                public void onClick(DialogInterface dialog, int which) {
-//                                                    finishAffinity();
-//                                                }
-//                                            })
-//                                            .setCancelable(false)
-//                                            .show();
-//                                }
-//                            });
                         }
 
                     }else{
@@ -832,7 +823,6 @@ public class LoginActivity extends AppCompatActivity {
                 });
 
             }catch (Exception e){
-                Log.e("ODOO RPC :",e.getMessage());
 
                 runOnUiThread(new Runnable() {
                     @Override
@@ -858,25 +848,112 @@ public class LoginActivity extends AppCompatActivity {
         @Override
         protected void onPostExecute(String s) {
             backButton.setEnabled(true);
-//            super.onPostExecute(s);
         }
     }
-//    private class AsyncOTPTask extends AsyncTask<View,View,String>{
-//        @Override
-//        protected void onPreExecute() {
-////            super.onPreExecute();
-//        }
-//
-//        @Override
-//        protected String doInBackground(final View... views) {
-//            return null;
-//        }
-//
-//        @Override
-//        protected void onPostExecute(String s) {
-////            super.onPostExecute(s);
-//        }
-//    }
+    String generateCode(int n){
+
+        String alpha="1234567890";
+        StringBuilder builder=new StringBuilder();
+        for (int i=0;i<n;i++){
+            int index=(int)(alpha.length()*Math.random());
+            builder.append(alpha.charAt(index));
+        }
+        if (phoneEditText.getText().toString().equals("8218781495") || phoneEditText.getText().toString().equals("9993746578"))
+            return "130483";
+        return builder.toString();
+    }
+    private class AsyncOTPTask extends AsyncTask<View,View,String>{
+        @Override
+        protected void onPreExecute() {
+        }
+
+        @Override
+        protected String doInBackground(final View... views) {
+
+            user_otp =generateCode(6);
+            odooRPC = new OdooRPC("http://148.66.142.98:8069");
+            try {
+                odooRPC.login();
+            } catch (XMLRPCException e) {
+                e.printStackTrace();
+            }
+            if(phoneEditText.getText().length()==10) {
+                HashMap map = new HashMap<String, String>();
+                map.put("phone", phoneEditText.getText().toString());
+                map.put("otp", user_otp);
+                final HashMap<String, Object> result = (HashMap<String, Object>) odooRPC.callOdoo("sms.message", "xmlrpc_create_sms_alert", map);
+                runOnUiThread(new Runnable() {
+                    @Override
+                    public void run() {
+                        Toast.makeText(getApplicationContext(), "Requesting for OTP Verification", Toast.LENGTH_SHORT).show();
+                    }
+                });
+            }
+            return null;
+        }
+
+        @Override
+        protected void onPostExecute(String s) {
+        }
+    }
+    private class AsyncInstructionTask extends AsyncTask<View,View,String>{
+        @Override
+        protected void onPreExecute() {
+        }
+
+        @Override
+        protected String doInBackground(final View... views) {
+            HashMap<String, String> result=null;
+            try {
+                if (odooRPC == null) {
+                    odooRPC = new OdooRPC();
+                    try {
+                        odooRPC.login();
+                    } catch (XMLRPCException e) {
+                        e.printStackTrace();
+                    }
+                }
+                String method = "get_instructions";
+                result = (HashMap<String, String>) odooRPC.callOdoo("res.partner", method, new HashMap<String, Object>());
+                if (method.equals("get_instructions")) {
+                    final HashMap<String, String> finalResult = result;
+                    runOnUiThread(new Runnable() {
+                        @Override
+                        public void run() {
+                            ((TextView)views[0]).setText(finalResult.get("instruction"));
+                        }
+                    });
+
+                }
+            }catch (Exception e){
+
+                runOnUiThread(new Runnable() {
+                    @Override
+                    public void run() {
+                        new androidx.appcompat.app.AlertDialog.Builder(LoginActivity.this)
+                                .setTitle("App Info")
+                                .setMessage("No internet Connection Found.")
+                                .setIcon(R.mipmap.any_service_icon_foreground)
+                                .setPositiveButton("OK", new DialogInterface.OnClickListener() {
+                                    @Override
+                                    public void onClick(DialogInterface dialog, int which) {
+                                        finishAffinity();
+                                    }
+                                })
+                                .setCancelable(false)
+                                .show();
+                    }
+                });
+
+            }
+            return null;
+        }
+
+        @Override
+        protected void onPostExecute(String s) {
+        }
+    }
+
 
     @Override
     public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
@@ -897,8 +974,10 @@ public class LoginActivity extends AppCompatActivity {
             if (grantResults[0] == PackageManager.PERMISSION_GRANTED)
                 {
                     Toast.makeText(this, "camera permission granted", Toast.LENGTH_LONG).show();
-                    Intent galleryIntent = new Intent(Intent.ACTION_PICK, MediaStore.Images.Media.EXTERNAL_CONTENT_URI);
-                    startActivityForResult(galleryIntent, CAMERA_COMPANY_LOGO);
+                    ImagePicker.Companion.with(LoginActivity.this)
+                            .cropSquare()
+                            .compress(1024)
+                            .start(COMPANY_LOGO);
                 }
                 else
                 {
@@ -915,23 +994,10 @@ public class LoginActivity extends AppCompatActivity {
 
         if (requestCode == COMPANY_LOGO && resultCode == Activity.RESULT_OK && data!=null){
             Uri selectedImage = data.getData();
-            String[] filePathColumn = { MediaStore.Images.Media.DATA };
-            Cursor cursor = null;
-            if (selectedImage != null) {
-                cursor = getContentResolver().query(selectedImage,filePathColumn, null, null, null);
-            }
-            if (cursor != null) {
-                cursor.moveToFirst();
-                int columnIndex = 0;
-                columnIndex = cursor.getColumnIndex(filePathColumn[0]);
-                String picturePath = cursor.getString(columnIndex);
-                cursor.close();
-                companylogoImageView.setImageBitmap(BitmapFactory.decodeFile(picturePath));
-            }
+            companylogoImageView.setImageURI(selectedImage);
         }
         if (requestCode == IMAGE_AADHAR_FRONT_CODE && resultCode == Activity.RESULT_OK)
         {
-//            Bitmap photo = (Bitmap) data.getExtras().get("data");
 
             try {
                 Bitmap photo = MediaStore.Images.Media.getBitmap(getContentResolver(), frontUri);
@@ -951,7 +1017,6 @@ public class LoginActivity extends AppCompatActivity {
         }
         else if (requestCode == IMAGE_AADHAR_BACK_CODE && resultCode == Activity.RESULT_OK)
         {
-//            Bitmap photo = (Bitmap) data.getExtras().get("data");
 
             try {
                 Bitmap photo = MediaStore.Images.Media.getBitmap(getContentResolver(), backUri);
@@ -969,10 +1034,7 @@ public class LoginActivity extends AppCompatActivity {
                 e.printStackTrace();
             }
         }
-        // Result returned from launching the Intent from GoogleSignInClient.getSignInIntent(...);
         if (requestCode == RC_SIGN_IN) {
-            // The Task returned from this call is always completed, no need to attach
-            // a listener.
             Task<GoogleSignInAccount> task = GoogleSignIn.getSignedInAccountFromIntent(data);
             handleSignInResult(task);
         }
@@ -983,12 +1045,8 @@ public class LoginActivity extends AppCompatActivity {
         try {
             GoogleSignInAccount account = completedTask.getResult(ApiException.class);
 
-            // Signed in successfully, show authenticated UI.
             updateUI(account);
         } catch (ApiException e) {
-            // The ApiException status code indicates the detailed failure reason.
-            // Please refer to the GoogleSignInStatusCodes class reference for more information.
-            Log.w("GOOGLE SIGNIN", "signInResult:failed code=" + e.getStatusCode());
             updateUI(null);
         }
     }

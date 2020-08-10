@@ -7,26 +7,23 @@ import android.app.NotificationManager;
 import android.app.PendingIntent;
 import android.app.Service;
 import android.content.Context;
-import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.SharedPreferences;
-import android.graphics.BitmapFactory;
 import android.net.ConnectivityManager;
 import android.os.AsyncTask;
 import android.os.Build;
 import android.os.IBinder;
 import android.os.PowerManager;
-import android.widget.Toast;
 
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 
-import androidx.appcompat.app.AlertDialog;
 import androidx.core.app.NotificationCompat;
 import de.timroes.axmlrpc.XMLRPCException;
 import helper.AnyserviceNotification;
 import helper.OdooRPC;
+import helper.Order;
 
 public class NotifyService extends Service {
 
@@ -37,10 +34,7 @@ public class NotifyService extends Service {
     boolean running=false;
     NotificationChannel channel=null;
 
-    /**
-     * Simply return null, since our Service will not be communicating with
-     * any other components. It just does its work silently.
-     */
+
     @Override
     public IBinder onBind(Intent intent) {
         return null;
@@ -51,7 +45,6 @@ public class NotifyService extends Service {
     private void handleIntent() {
         running=true;
         try {
-            // obtain the wake lock
             PowerManager pm = (PowerManager) getSystemService(POWER_SERVICE);
             mWakeLock = pm.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "Partial");
             mWakeLock.acquire(10*60*1000L /*10 minutes*/);
@@ -59,14 +52,12 @@ public class NotifyService extends Service {
             e.printStackTrace();
         }
 
-        // check the global background data setting
         ConnectivityManager cm = (ConnectivityManager) getSystemService(CONNECTIVITY_SERVICE);
         if (!cm.getBackgroundDataSetting()) {
             stopSelf();
             return;
         }
 
-        // do the actual work, in a separate thread
         new PollTask().execute();
     }
 
@@ -110,23 +101,47 @@ public class NotifyService extends Service {
                         if (objects != null) {
                             for (Object object : objects) {
                                 HashMap<String, String> notificationResp = (HashMap<String, String>) object;
-    //                            new AlertDialog.Builder(getApplicationContext())
-    //                                    .setTitle(notificationResp.get("title"))
-    //                                    .setMessage(notificationResp.get("message"))
-    //                                    .setIcon(R.mipmap.any_service_icon_foreground)
-    //                                    .setPositiveButton("Ok",null)
-    //                                    .show();
                                 AnyserviceNotification notification = new AnyserviceNotification();
                                 notification.setTitle(notificationResp.get("title"));
                                 notification.setMessage(notificationResp.get("message"));
                                 notification.setModel(notificationResp.get("model"));
                                 notification.setRecord(String.valueOf(notificationResp.get("record")));
+                                if(!String.valueOf(notificationResp.get("order")).equals("false")){
+                                    Object obj = notificationResp.get("order");
+                                    HashMap<String, String> order = (HashMap<String, String>) obj;
+                                    Order orderObj = new Order();
+                                    orderObj.setId(Integer.parseInt(String.valueOf(order.get("id"))));
+                                    orderObj.setCustID(Integer.parseInt(String.valueOf(order.get("cust_id"))));
+                                    orderObj.setAgentID(Integer.parseInt(String.valueOf(order.get("agent_id"))));
+                                    orderObj.setTotalPrice(Double.parseDouble(String.valueOf(order.get("total_price"))));
+                                    orderObj.setName(order.get("name"));
+                                    orderObj.setCustName(order.get("cust_name"));
+                                    orderObj.setAgentName(order.get("agent_name"));
+                                    orderObj.setDescription(order.get("description"));
+                                    orderObj.setGpsAddress(order.get("gps_address"));
+                                    orderObj.setFullAddress(order.get("full_address"));
+                                    orderObj.setState(order.get("state"));
+                                    orderObj.setCode(order.get("code"));
+                                    orderObj.setCustPhone(order.get("cust_phone"));
+                                    orderObj.setAgentPhone(order.get("agent_phone"));
+                                    orderObj.setRating(Float.parseFloat(String.valueOf(order.get("rating"))));
+                                    orderObj.setInvoicdId(Integer.parseInt(String.valueOf(order.get("invoice_id"))));
+                                    orderObj.setOrderDate(order.get("order_date"));
+                                    orderObj.setFinalDate(order.get("final_date"));
+                                    notification.setOrder(orderObj);
+                                }
                                 notifications.add(notification);
+                                PendingIntent contentIntent=null;
 
-                                Intent notificationIntent = new Intent(getApplicationContext(), HomeActivity.class);
-                                PendingIntent contentIntent = PendingIntent.getActivity(getApplicationContext(), 0, notificationIntent, 0);
+                                if(notification.getOrder()!=null){
+                                    Intent notificationIntent = new Intent(getApplicationContext(), OrderStatusActivity.class);
+                                    notificationIntent.putExtra("order",notification.getOrder());
+                                    contentIntent = PendingIntent.getActivity(getApplicationContext(), 0, notificationIntent, PendingIntent.FLAG_UPDATE_CURRENT);
+                                }else {
+                                    Intent notificationIntent = new Intent(getApplicationContext(), HomeActivity.class);
+                                    contentIntent = PendingIntent.getActivity(getApplicationContext(), 0, notificationIntent, PendingIntent.FLAG_UPDATE_CURRENT);
+                                }
 
-                                //Set up the notification
                                 NotificationCompat.BigTextStyle bigText = new NotificationCompat.BigTextStyle();
                                 bigText.bigText(notification.getMessage());
                                 bigText.setBigContentTitle(notification.getTitle());
@@ -136,20 +151,12 @@ public class NotifyService extends Service {
                                         .setTicker(notification.getTitle())
                                         .setContentTitle("Anyservice")
                                         .setContentText(notification.getMessage())
-                                        .setPriority(Notification.PRIORITY_HIGH)
+                                        .setPriority(Notification.PRIORITY_DEFAULT)
                                         .setContentIntent(contentIntent)
                                         .setAutoCancel(true)
                                         .setStyle(bigText);
-                                //At most three action buttons can be added
-                                //.addAction(android.R.drawable.ic_menu_camera, "Action 1", contentIntent)
-                                //.addAction(android.R.drawable.ic_menu_compass, "Action 2", contentIntent)
-                                //.addAction(android.R.drawable.ic_menu_info_details, "Action 3", contentIntent)
-                                //                            .setAutoCancel(true).build();
-
-                                //Show the notification
                                 NotificationManager mNotificationManager =
                                         (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
-                                // mId allows you to update the notification later on.
                                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
                                     if(channel==null) {
                                         channel = new NotificationChannel(channelId, "Anyservice Main", NotificationManager.IMPORTANCE_HIGH);
@@ -157,15 +164,12 @@ public class NotifyService extends Service {
                                     mNotificationManager.createNotificationChannel(channel);
                                 }
                                 mNotificationManager.notify(mId, builder.build());
-                                if(Build.VERSION.SDK_INT == Build.VERSION_CODES.O) {
-                                    startForeground(1, builder.build());
-                                }
                                 mId++;
                             }
                         }
 
                     }
-                    Thread.sleep(10000);
+                    Thread.sleep(40000);
                 }catch(Exception e){
                     try {
                         Thread.sleep(10000);
@@ -182,28 +186,14 @@ public class NotifyService extends Service {
 
         }
 
-        /**
-         * In here you should interpret whatever you fetched in doInBackground
-         * and push any notifications you need to the status bar, using the
-         * NotificationManager. I will not cover this here, go check the docs on
-         * NotificationManager.
-         *
-         * What you HAVE to do is call stopSelf() after you've pushed your
-         * notification(s). This will:
-         * 1) Kill the service so it doesn't waste precious resources
-         * 2) Call onDestroy() which will release the wake lock, so the device
-         *    can go to sleep again and save precious battery.
-         */
+
         @Override
         protected void onPostExecute(String notifications) {
 
         }
     }
 
-    /**
-     * This is deprecated, but you have to implement it if you're planning on
-     * supporting devices with an API level lower than 5 (Android 2.0).
-     */
+
     @SuppressWarnings("deprecation")
     @Override
     public void onStart(Intent intent, int startId) {
@@ -211,23 +201,14 @@ public class NotifyService extends Service {
         handleIntent();
     }
 
-    /**
-     * This is called on 2.0+ (API level 5 or higher). Returning
-     * START_NOT_STICKY tells the system to not restart the service if it is
-     * killed because of poor resource (memory/cpu) conditions.
-     */
+
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
         if (!running)
         handleIntent();
-        return START_STICKY;
+        return START_NOT_STICKY;
     }
 
-    /**
-     * In onDestroy() we release our wake lock. This ensures that whenever the
-     * Service stops (killed for resources, stopSelf() called, etc.), the wake
-     * lock will be released.
-     */
     public void onDestroy() {
         running=false;
         super.onDestroy();
@@ -237,44 +218,29 @@ public class NotifyService extends Service {
     @Override
     public void onCreate() {
         super.onCreate();
+
         Intent notificationIntent = new Intent(getApplicationContext(), HomeActivity.class);
         PendingIntent contentIntent = PendingIntent.getActivity(getApplicationContext(), 0, notificationIntent, 0);
         int mId = 1;
-        String channelId = "anyservice_channel";
-        //Set up the notification
-        NotificationCompat.BigTextStyle bigText = new NotificationCompat.BigTextStyle();
-        bigText.bigText("Anyservice is running in Background");
-        bigText.setBigContentTitle("Anyservice");
-        bigText.setSummaryText("Anyservice");
+        String channelId = "anyservice_channel_foreground";
+
         NotificationCompat.Builder builder = new NotificationCompat.Builder(getApplicationContext(), channelId);
         builder.setSmallIcon(R.mipmap.any_service_icon_foreground)
                 .setTicker("Anyservice")
                 .setContentTitle("Anyservice")
-                .setContentText("Anyservice is running in Background")
-                .setPriority(Notification.PRIORITY_HIGH)
+                .setContentText("Anyservice is running for notification updates.")
+                .setPriority(Notification.PRIORITY_DEFAULT)
                 .setContentIntent(contentIntent)
-                .setAutoCancel(true)
-                .setStyle(bigText);
-//        Notification notification = builder.setOngoing(true).build();
-        //At most three action buttons can be added
-        //.addAction(android.R.drawable.ic_menu_camera, "Action 1", contentIntent)
-        //.addAction(android.R.drawable.ic_menu_compass, "Action 2", contentIntent)
-        //.addAction(android.R.drawable.ic_menu_info_details, "Action 3", contentIntent)
-        //                            .setAutoCancel(true).build();
+                .setAutoCancel(true);
 
-        //Show the notification
         NotificationManager mNotificationManager =
                 (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
-        // mId allows you to update the notification later on.
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            if(channel==null) {
-                channel = new NotificationChannel(channelId, "Anyservice Main", NotificationManager.IMPORTANCE_HIGH);
-            }
-//            NotificationChannel channel = new NotificationChannel(channelId, "Anyservice", NotificationManager.IMPORTANCE_HIGH);
-            mNotificationManager.createNotificationChannel(channel);
+                NotificationChannel channel2 = new NotificationChannel(channelId, "Anyservice Foreground", NotificationManager.IMPORTANCE_HIGH);
+            mNotificationManager.createNotificationChannel(channel2);
         }
         mNotificationManager.notify(mId, builder.build());
-        if(Build.VERSION.SDK_INT == Build.VERSION_CODES.O) {
+        if(Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             startForeground(1, builder.build());
         }
     }

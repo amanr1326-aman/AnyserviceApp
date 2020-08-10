@@ -1,21 +1,12 @@
 package com.aryan.anyservice.ui.dashboard;
 
-import android.app.AlertDialog;
 import android.content.Context;
-import android.content.DialogInterface;
 import android.content.SharedPreferences;
 import android.os.AsyncTask;
 import android.util.Log;
 import android.widget.ProgressBar;
 
-import com.aryan.anyservice.LoginActivity;
-import com.aryan.anyservice.OrderStatusActivity;
-import com.aryan.anyservice.R;
-
-import java.text.ParseException;
-import java.text.SimpleDateFormat;
 import java.util.ArrayList;
-import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 
@@ -37,29 +28,44 @@ public class DashboardViewModel extends ViewModel {
         openOrders = new MutableLiveData<>();
         doneOrders = new MutableLiveData<>();
     }
+    public void addDoneOrder(Context context,int offset,int limit){
+        if(uid==null) {
+            SharedPreferences sp = context.getSharedPreferences("odoologin", Context.MODE_PRIVATE);
+            uid = sp.getString("login", null);
+        }
+        HashMap map = new HashMap<String,String>();
+        map.put("method","get_user_done_orders");
+        map.put("model","anyservice.order");
+        map.put("login",uid);
+        map.put("offset",offset);
+        map.put("limit",limit);
+        AsyncOdooRPCcall task = new AsyncOdooRPCcall();
+        task.execute(map);
 
-
-    public MutableLiveData<List<Order>> getDoneServices(Context context) {
-        SharedPreferences sp = context.getSharedPreferences("odoologin", Context.MODE_PRIVATE);
-        uid = sp.getString("login",null);
+    }
+    public void addOpenOrder(Context context,int offset,int limit){
+        if(uid==null){
+            SharedPreferences sp = context.getSharedPreferences("odoologin", Context.MODE_PRIVATE);
+            uid = sp.getString("login",null);
+        }
 
 
         HashMap map = new HashMap<String,String>();
         map.put("method","get_user_orders");
         map.put("model","anyservice.order");
         map.put("login",uid);
+        map.put("offset",offset);
+        map.put("limit",limit);
         AsyncOdooRPCcall task = new AsyncOdooRPCcall();
         task.execute(map);
+
+    }
+
+    public MutableLiveData<List<Order>> getDoneServices() {
         return doneOrders;
     }
 
     public MutableLiveData<List<Order>> getOpenServices() {
-        HashMap map = new HashMap<String,String>();
-        map.put("method","get_user_done_orders");
-        map.put("model","anyservice.order");
-        map.put("login",uid);
-        AsyncOdooRPCcall task = new AsyncOdooRPCcall();
-        task.execute(map);
         return openOrders;
     }
 
@@ -97,21 +103,20 @@ public class DashboardViewModel extends ViewModel {
                             orderObj.setAgentID(Integer.parseInt(String.valueOf(order.get("agent_id"))));
                             orderObj.setTotalPrice(Double.parseDouble(String.valueOf(order.get("total_price"))));
                             orderObj.setName(order.get("name"));
+                            orderObj.setIcon(order.get("image"));
                             orderObj.setCustName(order.get("cust_name"));
                             orderObj.setAgentName(order.get("agent_name"));
                             orderObj.setDescription(order.get("description"));
                             orderObj.setGpsAddress(order.get("gps_address"));
                             orderObj.setFullAddress(order.get("full_address"));
                             orderObj.setState(order.get("state"));
+                            orderObj.setCode(order.get("code"));
                             orderObj.setCustPhone(order.get("cust_phone"));
                             orderObj.setAgentPhone(order.get("agent_phone"));
                             orderObj.setRating(Float.parseFloat(String.valueOf(order.get("rating"))));
-                            try {
-                                orderObj.setOrderDate(new SimpleDateFormat("yyyy-mm-dd").parse(order.get("order_date")));
-                                orderObj.setFinalDate(new SimpleDateFormat("yyyy-mm-dd").parse(order.get("final_date")));
-                            } catch (ParseException e) {
-                                e.printStackTrace();
-                            }
+                            orderObj.setInvoicdId(Integer.parseInt(String.valueOf(order.get("invoice_id"))));
+                            orderObj.setOrderDate(order.get("order_date"));
+                            orderObj.setFinalDate(order.get("final_date"));
                             list.add(orderObj);
                         }
                         doneOrders.postValue(list);
@@ -135,15 +140,14 @@ public class DashboardViewModel extends ViewModel {
                             orderObj.setGpsAddress(order.get("gps_address"));
                             orderObj.setFullAddress(order.get("full_address"));
                             orderObj.setState(order.get("state"));
+                            orderObj.setCode(order.get("code"));
                             orderObj.setCustPhone(order.get("cust_phone"));
                             orderObj.setAgentPhone(order.get("agent_phone"));
                             orderObj.setRating(Float.parseFloat(String.valueOf(order.get("rating"))));
-                            try {
-                                orderObj.setOrderDate(new SimpleDateFormat("yyyy-mm-dd").parse(order.get("order_date")));
-                                orderObj.setFinalDate(new SimpleDateFormat("yyyy-mm-dd").parse(order.get("final_date")));
-                            } catch (ParseException e) {
-                                e.printStackTrace();
-                            }
+                            orderObj.setInvoicdId(Integer.parseInt(String.valueOf(order.get("invoice_id"))));
+                            orderObj.setOrderDate(order.get("order_date"));
+                            orderObj.setFinalDate(order.get("final_date"));
+
                             list.add(orderObj);
                         }
                         openOrders.postValue(list);

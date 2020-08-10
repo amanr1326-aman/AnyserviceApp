@@ -1,37 +1,29 @@
 package com.aryan.anyservice;
 
-import adaptor.ServiceDetailsAdaptor;
-import adaptor.StateAdaptor;
-import androidx.appcompat.app.AlertDialog;
-import androidx.appcompat.app.AppCompatActivity;
-import androidx.appcompat.widget.AppCompatImageView;
-import androidx.appcompat.widget.AppCompatRatingBar;
-import androidx.appcompat.widget.AppCompatTextView;
-import de.timroes.axmlrpc.XMLRPCException;
-import helper.IconTextView;
-import helper.OdooRPC;
-import helper.Order;
-import helper.OrderStates;
-import helper.ServiceDetails;
-import helper.Utility;
-
+import android.Manifest;
 import android.annotation.SuppressLint;
+import android.content.ActivityNotFoundException;
 import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.SharedPreferences;
+import android.content.pm.PackageManager;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.icu.lang.UCharacter;
 import android.net.Uri;
 import android.os.AsyncTask;
+import android.os.Build;
 import android.os.Bundle;
+import android.os.Environment;
+import android.text.Editable;
+import android.text.TextWatcher;
 import android.util.Base64;
-import android.util.Log;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.Button;
 import android.widget.EditText;
+import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.ListView;
 import android.widget.ProgressBar;
@@ -41,20 +33,42 @@ import android.widget.ScrollView;
 import android.widget.TextView;
 import android.widget.Toast;
 
-
+import com.github.amlcurran.showcaseview.ShowcaseView;
+import com.github.amlcurran.showcaseview.targets.ViewTarget;
 import com.transferwise.sequencelayout.SequenceLayout;
 
-import java.text.ParseException;
-import java.text.SimpleDateFormat;
+import java.io.File;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
+import java.util.regex.Pattern;
+
+import adaptor.ServiceDetailsAdaptor;
+import adaptor.StateAdaptor;
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
+import androidx.appcompat.app.AlertDialog;
+import androidx.appcompat.app.AppCompatActivity;
+import androidx.appcompat.widget.AppCompatButton;
+import androidx.appcompat.widget.AppCompatImageView;
+import androidx.appcompat.widget.AppCompatRatingBar;
+import androidx.appcompat.widget.AppCompatTextView;
+import androidx.core.content.FileProvider;
+import de.timroes.axmlrpc.XMLRPCException;
+import helper.IconTextView;
+import helper.OdooRPC;
+import helper.Order;
+import helper.OrderStates;
+import helper.ServiceDetails;
+import helper.Utility;
 
 public class OrderStatusActivity extends AppCompatActivity {
     AppCompatImageView icon;
     AppCompatTextView company,name,description,totalPrice;
     AppCompatRatingBar rating;
-    Button backButton,confirm;
+    Button backButton,confirm,pay;
+    AppCompatButton code;
     IconTextView callButton;
     OdooRPC odooRPC;
     SequenceLayout state;
@@ -64,8 +78,10 @@ public class OrderStatusActivity extends AppCompatActivity {
     ProgressBar progressBar;
     ScrollView scrollView;
     ListView services;
+    final int PAYMENTCODE=141;
+    ImageView verified;
+    ShowcaseView sv;
 
-//    String[] descriptionData = {"Submitted", "Pending From Agent","Accepted By Agent","In Progress","Awaiting Payment","Paid"};
 
     @Override
     public void onBackPressed() {
@@ -73,7 +89,6 @@ public class OrderStatusActivity extends AppCompatActivity {
         setResult(121,intent);
         finish();
 
-//        super.onBackPressed();
     }
 
     @Override
@@ -84,6 +99,7 @@ public class OrderStatusActivity extends AppCompatActivity {
         SharedPreferences sp = getApplicationContext().getSharedPreferences("odoologin", Context.MODE_PRIVATE);
         uid = sp.getString("login",null);
         icon = findViewById(R.id.icon);
+        pay = findViewById(R.id.pay_button);
         company = findViewById(R.id.order_company);
         name = findViewById(R.id.name);
         totalPrice = findViewById(R.id.order_price);
@@ -94,7 +110,75 @@ public class OrderStatusActivity extends AppCompatActivity {
         callButton = findViewById(R.id.call);
         scrollView = findViewById(R.id.scrollview);
         progressBar = findViewById(R.id.progressbar);
+        code = findViewById(R.id.code);
+        verified = findViewById(R.id.verified);
+        Button sendMessage = findViewById(R.id.send_message);
         AppCompatTextView details = findViewById(R.id.details);
+        AppCompatTextView agentIDTv = findViewById(R.id.agent_id);
+
+        sendMessage.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                LinearLayout linearLayout=new LinearLayout(getApplicationContext());
+                final EditText remark=new EditText(getApplicationContext());
+                remark.setBackground(getResources().getDrawable(R.drawable.rounded_edittext));
+                remark.setHint("Message");
+                remark.setInputType(Pattern.MULTILINE);
+                linearLayout.setOrientation(LinearLayout.VERTICAL);
+                linearLayout.addView(remark);
+                linearLayout.setPadding(50,20,50,20);
+                final AlertDialog alert =new AlertDialog.Builder(OrderStatusActivity.this)
+                        .setTitle("Send Message")
+                        .setMessage("Send reminder or messages")
+                        .setIcon(R.mipmap.any_service_icon_foreground)
+                        .setView(linearLayout)
+                        .setPositiveButton("Send", new DialogInterface.OnClickListener() {
+                            @Override
+                            public void onClick(DialogInterface dialog, int which) {
+                                if(!remark.getText().toString().equals("")) {
+                                    HashMap map2 = new HashMap<String, Object>();
+                                    map2.put("method", "xmlrpcadd_remark");
+                                    map2.put("model", "anyservice.order");
+                                    map2.put("login", uid);
+                                    map2.put("id", order.getId());
+                                    map2.put("msg", remark.getText().toString());
+                                    AsyncOdooRPCcall task2 = new AsyncOdooRPCcall();
+                                    task2.execute(map2);
+                                }else{
+                                    remark.setError("This field is required.");
+                                    Toast.makeText(getApplicationContext(),"All fields are required",Toast.LENGTH_LONG).show();
+                                }
+                            }
+                        })
+                        .setNegativeButton("Cancel",null)
+                        .setCancelable(false)
+                        .show();
+                alert.getButton(AlertDialog.BUTTON_POSITIVE).setEnabled(false);
+                remark.addTextChangedListener(new TextWatcher() {
+                    @Override
+                    public void beforeTextChanged(CharSequence s, int start, int count, int after) {
+
+                    }
+
+                    @Override
+                    public void onTextChanged(CharSequence s, int start, int before, int count) {
+
+                    }
+
+                    @Override
+                    public void afterTextChanged(Editable s) {
+                        if(remark.getText().length()>0){
+                            alert.getButton(AlertDialog.BUTTON_POSITIVE).setEnabled(true);
+                        }else{
+                            alert.getButton(AlertDialog.BUTTON_POSITIVE).setEnabled(false);
+
+                        }
+
+                    }
+                });
+
+            }
+        });
         if(order==null) {
             order = (Order) getIntent().getSerializableExtra("order");
         }
@@ -105,11 +189,23 @@ public class OrderStatusActivity extends AppCompatActivity {
         }else{
             company.setText(order.getAgentName());
         }
+
+        agentIDTv.setText(String.format("ID - ASA%d", order.getAgentID()));
         name.setText(order.getName());
         description.setText(order.getDescription());
         state = (SequenceLayout)findViewById(R.id.state);
         totalPrice.setText(""+order.getTotalPrice());
         rating.setRating(order.getRating());
+        if(order.getState().equals("Paid")){
+            Button invoice=findViewById(R.id.invoice_button);
+            invoice.setVisibility(View.VISIBLE);
+            invoice.setOnClickListener(new View.OnClickListener() {
+                @Override
+                public void onClick(View v) {
+                    requestPermision();
+                }
+            });
+        }
 
         if(isAgent){
             LinearLayout actionAgentLayout = findViewById(R.id.action_agent_layout);
@@ -159,10 +255,10 @@ public class OrderStatusActivity extends AppCompatActivity {
                     linearLayout.setOrientation(LinearLayout.VERTICAL);
                     linearLayout.addView(linearLayout2);
                     linearLayout.addView(remark);
-                    linearLayout.setPadding(20,20,20,20);
-                    new AlertDialog.Builder(OrderStatusActivity.this)
-                            .setTitle("Order Cancel")
-                            .setMessage("Cancelling Order")
+                    linearLayout.setPadding(50,20,50,20);
+                    final AlertDialog alert = new AlertDialog.Builder(OrderStatusActivity.this)
+                            .setTitle("Price Update")
+                            .setMessage("Update order price by using otp sent to the customer after get OTP button is pressed.")
                             .setIcon(R.mipmap.any_service_icon_foreground)
                             .setView(linearLayout)
                             .setPositiveButton("Yes", new DialogInterface.OnClickListener() {
@@ -194,6 +290,29 @@ public class OrderStatusActivity extends AppCompatActivity {
                             })
                             .setCancelable(false)
                             .show();
+                    alert.getButton(AlertDialog.BUTTON_POSITIVE).setEnabled(false);
+                    remark.addTextChangedListener(new TextWatcher() {
+                        @Override
+                        public void beforeTextChanged(CharSequence s, int start, int count, int after) {
+
+                        }
+
+                        @Override
+                        public void onTextChanged(CharSequence s, int start, int before, int count) {
+
+                        }
+
+                        @Override
+                        public void afterTextChanged(Editable s) {
+                            if(remark.getText().length()>0){
+                                alert.getButton(AlertDialog.BUTTON_POSITIVE).setEnabled(true);
+                            }else{
+                                alert.getButton(AlertDialog.BUTTON_POSITIVE).setEnabled(false);
+
+                            }
+
+                        }
+                    });
                 }
             });
             confirm.setVisibility(View.GONE);
@@ -230,7 +349,7 @@ public class OrderStatusActivity extends AppCompatActivity {
                         confirmAgent.setOnClickListener(new View.OnClickListener() {
                             @Override
                             public void onClick(View v) {
-                                agentAction(order, "Start Service", "Do You want to start Service(Please Enter the secret Code from customer)?", "progress");
+                                agentAction(order, "Start Service", "Do You want to start Service?", "progress");
                             }
                         });
                         break;
@@ -244,6 +363,7 @@ public class OrderStatusActivity extends AppCompatActivity {
                         });
                         break;
                 }
+
             }
             cancelAgent.setOnClickListener(new View.OnClickListener() {
                 @Override
@@ -254,8 +374,8 @@ public class OrderStatusActivity extends AppCompatActivity {
                     remark.setHint("Remark");
                     linearLayout.setOrientation(LinearLayout.VERTICAL);
                     linearLayout.addView(remark);
-                    linearLayout.setPadding(20,20,20,20);
-                    new AlertDialog.Builder(OrderStatusActivity.this)
+                    linearLayout.setPadding(50,20,50,20);
+                    final AlertDialog alert = new AlertDialog.Builder(OrderStatusActivity.this)
                             .setTitle("Order Cancel")
                             .setMessage("Cancelling Order")
                             .setIcon(R.mipmap.any_service_icon_foreground)
@@ -281,12 +401,89 @@ public class OrderStatusActivity extends AppCompatActivity {
                                 }
                             })
                             .setNegativeButton("No",null)
+                            .setCancelable(false)
                             .show();
+                    alert.getButton(AlertDialog.BUTTON_POSITIVE).setEnabled(false);
+                    remark.addTextChangedListener(new TextWatcher() {
+                        @Override
+                        public void beforeTextChanged(CharSequence s, int start, int count, int after) {
+
+                        }
+
+                        @Override
+                        public void onTextChanged(CharSequence s, int start, int before, int count) {
+
+                        }
+
+                        @Override
+                        public void afterTextChanged(Editable s) {
+                            if(remark.getText().length()>0){
+                                alert.getButton(AlertDialog.BUTTON_POSITIVE).setEnabled(true);
+                            }else{
+                                alert.getButton(AlertDialog.BUTTON_POSITIVE).setEnabled(false);
+
+                            }
+
+                        }
+                    });
 
                 }
             });
 
-        }else {
+        }else {////Customer start
+            if(order.getState().equals("Accepted By Agent")) {
+                code.setText("Code -" + order.getCode());
+                code.setVisibility(View.VISIBLE);
+                code.setOnClickListener(new View.OnClickListener() {
+                    @Override
+                    public void onClick(View v) {
+                        new AlertDialog.Builder(OrderStatusActivity.this)
+                                .setTitle("Send Code to Agent")
+                                .setMessage("Do you want to send the code to agent to start your service now?")
+                                .setIcon(R.mipmap.any_service_icon_foreground)
+                                .setPositiveButton("Yes", new DialogInterface.OnClickListener() {
+                                    @Override
+                                    public void onClick(DialogInterface dialog, int which) {
+                                        HashMap<String, Object> map2 = new HashMap<String, Object>();
+                                        map2.put("method", "create_notification");
+                                        map2.put("model", "anyservice.order");
+                                        map2.put("id", order.getAgentID());
+                                        map2.put("name", "Code for Order " + order.getName());
+                                        map2.put("msg", "Code - " + order.getCode() + "\nCustomer sent you the code to start the service.\nPlease use this code to start the Service.");
+                                        AsyncOdooRPCcall task2 = new AsyncOdooRPCcall();
+                                        task2.execute(map2);
+                                        dialog.dismiss();
+
+                                    }
+                                })
+                                .setNegativeButton("No", new DialogInterface.OnClickListener() {
+                                    @Override
+                                    public void onClick(DialogInterface dialog, int which) {
+                                        dialog.dismiss();
+                                    }
+                                })
+                                .setCancelable(true)
+                                .show();
+                    }
+                });
+            }
+            if(order.getState().equals("Awaiting Payment")){
+                pay.setVisibility(View.VISIBLE);
+                pay.setText(pay.getText().toString()+" ("+order.getTotalPrice()+")");
+                pay.setOnClickListener(new View.OnClickListener() {
+                    @Override
+                    public void onClick(View v) {
+                        HashMap<String, Object> map2 = new HashMap<String, Object>();
+                        map2.put("method", "get_payment_link");
+                        map2.put("model", "anyservice.order");
+                        map2.put("login", uid);
+                        map2.put("id", order.getId());
+                        AsyncOdooRPCcall task2 = new AsyncOdooRPCcall();
+                        task2.execute(map2);
+
+                    }
+                });
+            }
             if (order.getState().equals("Submitted") || order.getState().equals("Pending From Agent")) {
 
             } else if (order.getState().equals("Accepted By Agent")) {
@@ -297,10 +494,10 @@ public class OrderStatusActivity extends AppCompatActivity {
                     price = order.getTotalPrice();
                 }
                 confirm.setText("Cancel (Charge - Rs. " + price * 10 / 100 + ")");
-            } else if (order.getState().equals("Paid")) {
+            } else if (order.getState().equals("Paid") && order.getRating()==0) {
                 confirm.setText("Rate - " + order.getAgentName());
             } else {
-                confirm.setVisibility(View.INVISIBLE);
+                confirm.setVisibility(View.GONE);
             }
 
             confirm.setOnClickListener(new View.OnClickListener() {
@@ -323,8 +520,8 @@ public class OrderStatusActivity extends AppCompatActivity {
                         remark.setHint("Remark");
                         linearLayout.setOrientation(LinearLayout.VERTICAL);
                         linearLayout.addView(remark);
-                        linearLayout.setPadding(20,20,20,20);
-                        new AlertDialog.Builder(OrderStatusActivity.this)
+                        linearLayout.setPadding(50,20,50,20);
+                        final AlertDialog alert = new AlertDialog.Builder(OrderStatusActivity.this)
                                 .setTitle("Order Cancel")
                                 .setMessage("Cancelling Order with Charge  - "+finalPrice)
                                 .setIcon(R.mipmap.any_service_icon_foreground)
@@ -350,7 +547,31 @@ public class OrderStatusActivity extends AppCompatActivity {
                                     }
                                 })
                                 .setNegativeButton("No",null)
+                                .setCancelable(false)
                                 .show();
+                        alert.getButton(AlertDialog.BUTTON_POSITIVE).setEnabled(false);
+                        remark.addTextChangedListener(new TextWatcher() {
+                            @Override
+                            public void beforeTextChanged(CharSequence s, int start, int count, int after) {
+
+                            }
+
+                            @Override
+                            public void onTextChanged(CharSequence s, int start, int before, int count) {
+
+                            }
+
+                            @Override
+                            public void afterTextChanged(Editable s) {
+                                if(remark.getText().length()>0){
+                                    alert.getButton(AlertDialog.BUTTON_POSITIVE).setEnabled(true);
+                                }else{
+                                    alert.getButton(AlertDialog.BUTTON_POSITIVE).setEnabled(false);
+
+                                }
+
+                            }
+                        });
 
                     }
                     if(order.getState().equals("Paid")){
@@ -364,15 +585,9 @@ public class OrderStatusActivity extends AppCompatActivity {
                         linearLayout.addView(ratingBar);
                         linearLayout.addView(remark);
                         ratingBar.setClickable(true);
-//                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-//                            ratingBar.setMin(1);
-//                            ratingBar.setMax(5);
-//                        }else{
-//                            ratingBar.setMax(4);
-//                        }
                         ratingBar.setLayoutParams(new LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT));
                         ratingBar.setNumStars(5);
-                        new AlertDialog.Builder(OrderStatusActivity.this)
+                        final AlertDialog alert = new AlertDialog.Builder(OrderStatusActivity.this)
                                 .setTitle("Rating")
                                 .setMessage("Please Rate - "+order.getAgentName())
                                 .setIcon(R.mipmap.any_service_icon_foreground)
@@ -409,6 +624,29 @@ public class OrderStatusActivity extends AppCompatActivity {
                                 .setCancelable(false)
                                 .setNegativeButton("Cancel",null)
                                 .show();
+                        alert.getButton(AlertDialog.BUTTON_POSITIVE).setEnabled(false);
+                        remark.addTextChangedListener(new TextWatcher() {
+                            @Override
+                            public void beforeTextChanged(CharSequence s, int start, int count, int after) {
+
+                            }
+
+                            @Override
+                            public void onTextChanged(CharSequence s, int start, int before, int count) {
+
+                            }
+
+                            @Override
+                            public void afterTextChanged(Editable s) {
+                                if(remark.getText().length()>0 && ratingBar.getRating()>0){
+                                    alert.getButton(AlertDialog.BUTTON_POSITIVE).setEnabled(true);
+                                }else{
+                                    alert.getButton(AlertDialog.BUTTON_POSITIVE).setEnabled(false);
+
+                                }
+
+                            }
+                        });
                     }
                 }
             });
@@ -427,6 +665,12 @@ public class OrderStatusActivity extends AppCompatActivity {
                 startActivity(intent);
             }
         });
+        icon.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+//                order.
+            }
+        });
 
         try {
             byte[] decodedString = Base64.decode(order.getIcon(), Base64.DEFAULT);
@@ -438,6 +682,10 @@ public class OrderStatusActivity extends AppCompatActivity {
         details.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
+                if(sv!=null){
+                    if(sv.isShowing()) sv.hide();
+                    sv=null;
+                }
                 View layout = getLayoutInflater().inflate(R.layout.order_description,null);
                 final EditText gpsAddress=layout.findViewById(R.id.gps_address);
                 final EditText fullAddress=layout.findViewById(R.id.full_address);
@@ -484,11 +732,21 @@ public class OrderStatusActivity extends AppCompatActivity {
 
         AsyncOdooRPCcall task = new AsyncOdooRPCcall();
         task.execute(map);
+
+        sv = new ShowcaseView.Builder(OrderStatusActivity.this)
+                .setTarget(new ViewTarget(details))
+                .setContentTitle("More Details")
+                .setContentText("Click to all the details related to your order.")
+                .singleShot(205) // provide a unique ID used to ensure it is only shown once
+                .withHoloShowcase()
+                .setStyle(R.style.showcaseTheme)
+                .build();
     }
     @SuppressLint("StaticFieldLeak")
     class AsyncOdooRPCcall extends AsyncTask<HashMap<String,Object>, ProgressBar,HashMap<String,Object>> {
         @Override
         protected void onPreExecute() {
+
         }
 
         @Override
@@ -508,6 +766,18 @@ public class OrderStatusActivity extends AppCompatActivity {
                     order = (Order) getIntent().getSerializableExtra("order");
                 }
                 String method = (String) hashMaps[0].get("method");
+                if(!method.equals("notify_onchange_order")) {
+                    runOnUiThread(new Runnable() {
+                        @Override
+                        public void run() {
+                            if (scrollView.getVisibility() == View.VISIBLE) {
+                                progressBar.setVisibility(View.VISIBLE);
+                                scrollView.setVisibility(View.GONE);
+                            }
+
+                        }
+                    });
+                }
                 String model = (String) hashMaps[0].get("model");
                 hashMaps[0].remove("method");
                 hashMaps[0].remove("model");
@@ -526,9 +796,13 @@ public class OrderStatusActivity extends AppCompatActivity {
                             stateObj.setActive((boolean) stateRes.get("active"));
                             list.add(stateObj);
                         }
+                        final HashMap<String, Object> finalResult = result;
                         runOnUiThread(new Runnable() {
                             @Override
                             public void run() {
+                                if(Boolean.parseBoolean(String.valueOf(finalResult.get("verified"))) && !isAgent){
+                                    verified.setVisibility(View.VISIBLE);
+                                }
                                 StateAdaptor adaptor = new StateAdaptor(list);
                                 state.setAdapter(adaptor);
                             }
@@ -544,37 +818,37 @@ public class OrderStatusActivity extends AppCompatActivity {
                         });
 
                     } else if (method.equals("update_order")) {
-                    if(hashMaps[0].get("rating")!=null){
-                        order.setRating((Float) hashMaps[0].get("rating"));
-                    }if(hashMaps[0].get("price")!=null){
-                        order.setTotalPrice((Double) hashMaps[0].get("price"));
-                    }
-                    if(hashMaps[0].get("cancel")!=null){
-                        order.setState("Cancelled");
-                    }
-                    if(hashMaps[0].get("accept")!=null){
-                        order.setState("Accepted By Agent");
-                    }
-                    if(hashMaps[0].get("progress")!=null){
-                        order.setState("In Progress");
-                    }
-                    if(hashMaps[0].get("done")!=null){
-                        order.setState("Awaiting Payment");
-                    }
-                    if( hashMaps[0].get("paid")!=null){
-                        order.setState("Paid");
-                    }
-                    reloadActivity(order);
-                        final String msg = String.valueOf(result.get("msg"));
-                        if(!msg.equals("null")) {
-                            runOnUiThread(new Runnable() {
-                                @Override
-                                public void run() {
-                                    Toast.makeText(getApplicationContext(), msg, Toast.LENGTH_LONG).show();
-
-                                }
-                            });
+                        if(hashMaps[0].get("rating")!=null){
+                            order.setRating((Float) hashMaps[0].get("rating"));
+                        }if(hashMaps[0].get("price")!=null){
+                            order.setTotalPrice((Double) hashMaps[0].get("price"));
                         }
+                        if(hashMaps[0].get("cancel")!=null){
+                            order.setState("Cancelled");
+                        }
+                        if(hashMaps[0].get("accept")!=null){
+                            order.setState("Accepted By Agent");
+                        }
+                        if(hashMaps[0].get("progress")!=null){
+                            order.setState("In Progress");
+                        }
+                        if(hashMaps[0].get("done")!=null){
+                            order.setState("Awaiting Payment");
+                        }
+                        if( hashMaps[0].get("paid")!=null || hashMaps[0].get("clientpaid")!=null){
+                            order.setState("Paid");
+                        }
+                        reloadActivity(order);
+                            final String msg = String.valueOf(result.get("msg"));
+                            if(!msg.equals("null")) {
+                                runOnUiThread(new Runnable() {
+                                    @Override
+                                    public void run() {
+                                        Toast.makeText(getApplicationContext(), msg, Toast.LENGTH_LONG).show();
+
+                                    }
+                                });
+                            }
 
                     } else if (method.equals("get_order_services")) {
                         Object[] objects = (Object[]) result.get("services");
@@ -590,12 +864,22 @@ public class OrderStatusActivity extends AppCompatActivity {
                         runOnUiThread(new Runnable() {
                             @Override
                             public void run() {
-                                ServiceDetailsAdaptor serviceDetailsAdaptor = new ServiceDetailsAdaptor(getApplicationContext(), R.layout.service_list_item, list);
+                                ServiceDetailsAdaptor serviceDetailsAdaptor = new ServiceDetailsAdaptor(getApplicationContext(), R.layout.service_list_item, list,false);
                                 services.setAdapter(serviceDetailsAdaptor);
                                 Utility.setListViewHeightBasedOnChildren(services);
                             }
                         });
                     } else if (method.equals("notify_onchange_order")) {
+                        runOnUiThread(new Runnable() {
+                            @Override
+                            public void run() {
+                                if (scrollView.getVisibility() == View.VISIBLE) {
+                                    progressBar.setVisibility(View.VISIBLE);
+                                    scrollView.setVisibility(View.GONE);
+                                }
+
+                            }
+                        });
                         Object[] objects = (Object[]) result.get("orders");
                         List<Order> list = new ArrayList<>();
                         for (Object obj : objects) {
@@ -606,28 +890,42 @@ public class OrderStatusActivity extends AppCompatActivity {
                             orderObj.setAgentID(Integer.parseInt(String.valueOf(order.get("agent_id"))));
                             orderObj.setTotalPrice(Double.parseDouble(String.valueOf(order.get("total_price"))));
                             orderObj.setName(order.get("name"));
+                            orderObj.setIcon(order.get("image"));
                             orderObj.setCustName(order.get("cust_name"));
                             orderObj.setAgentName(order.get("agent_name"));
                             orderObj.setDescription(order.get("description"));
                             orderObj.setGpsAddress(order.get("gps_address"));
                             orderObj.setFullAddress(order.get("full_address"));
                             orderObj.setState(order.get("state"));
+                            orderObj.setCode(order.get("code"));
                             orderObj.setCustPhone(order.get("cust_phone"));
                             orderObj.setAgentPhone(order.get("agent_phone"));
                             orderObj.setRating(Float.parseFloat(String.valueOf(order.get("rating"))));
-                            try {
-                                orderObj.setOrderDate(new SimpleDateFormat("yyyy-mm-dd").parse(order.get("order_date")));
-                                orderObj.setFinalDate(new SimpleDateFormat("yyyy-mm-dd").parse(order.get("final_date")));
-                            } catch (ParseException e) {
-                                e.printStackTrace();
-                            }
+                            orderObj.setInvoicdId(Integer.parseInt(String.valueOf(order.get("invoice_id"))));
+                            orderObj.setOrderDate(order.get("order_date"));
+                            orderObj.setFinalDate(order.get("final_date"));
                             list.add(orderObj);
                         }
-                        Log.e("Notification",""+list.get(0).getId());
                         if (list.size() > 0) {
                             reloadActivity(list.get(0));
                         }
 
+                    }else  if(method.equals("get_payment_link")){
+                        Intent intent =new Intent(getApplicationContext(),PaymentActivity.class);
+                        intent.putExtra("link",String.valueOf(result.get("link")));
+                        startActivityForResult(intent,PAYMENTCODE);
+                    }else if(method.equals("xmlrpcadd_remark")){
+                        final String msg = String.valueOf(result.get("msg"));
+                        if(!msg.equals("null")) {
+                            runOnUiThread(new Runnable() {
+                                @Override
+                                public void run() {
+                                    Toast.makeText(getApplicationContext(), msg, Toast.LENGTH_LONG).show();
+
+                                }
+                            });
+                        }
+                        reloadActivity(order);
                     }
 
                 } else {
@@ -643,20 +941,7 @@ public class OrderStatusActivity extends AppCompatActivity {
                     }
 
                 }
-                if(method.equals("notify_onchange_order")) {
-                    runOnUiThread(new Runnable() {
-                        @Override
-                        public void run() {
-                            if(scrollView.getVisibility()==View.GONE) {
-                                progressBar.setVisibility(View.GONE);
-                                scrollView.setVisibility(View.VISIBLE);
-                            }
-
-                        }
-                    });
-                }
             }catch (Exception e){
-                Log.e("ODOO RPC :",e.getMessage());
 
                 runOnUiThread(new Runnable() {
                     @Override
@@ -675,6 +960,17 @@ public class OrderStatusActivity extends AppCompatActivity {
                                 .show();
                     }
                 });
+            }finally {
+                    runOnUiThread(new Runnable() {
+                        @Override
+                        public void run() {
+                            if(scrollView.getVisibility()==View.GONE) {
+                                progressBar.setVisibility(View.GONE);
+                                scrollView.setVisibility(View.VISIBLE);
+                            }
+
+                        }
+                    });
             }
 
             return result;
@@ -683,22 +979,20 @@ public class OrderStatusActivity extends AppCompatActivity {
         @Override
         protected void onPostExecute(HashMap<String, Object> stringObjectHashMap) {
 
+
         }
     }
 
     void agentAction(final Order orderobj, String title, String msg, final String action){
         LinearLayout linearLayout=new LinearLayout(getApplicationContext());
         final EditText remark=new EditText(getApplicationContext());
-                    remark.setBackground(getResources().getDrawable(R.drawable.rounded_edittext));
-        if(action.equals("progress")) {
-            remark.setHint("Secret Code");
-        }else{
-            remark.setHint("Remark");
-        }
+        remark.setBackground(getResources().getDrawable(R.drawable.rounded_edittext));
+        remark.setHint("Remark");
+
         linearLayout.setOrientation(LinearLayout.VERTICAL);
         linearLayout.addView(remark);
-        linearLayout.setPadding(20,20,20,20);
-        new AlertDialog.Builder(OrderStatusActivity.this)
+        linearLayout.setPadding(50,20,50,20);
+        final AlertDialog alert = new AlertDialog.Builder(OrderStatusActivity.this)
                 .setTitle(title)
                 .setMessage(msg)
                 .setIcon(R.mipmap.any_service_icon_foreground)
@@ -716,7 +1010,7 @@ public class OrderStatusActivity extends AppCompatActivity {
                             map2.put("msg", remark.getText().toString());
                             if(action.equals("progress")) {
                                 map2.put("msg", "Work Start attempt by the Agent");
-                                map2.put("code", remark.getText().toString());
+                                map2.put("code", order.getCode());
                             }
                             AsyncOdooRPCcall task2 = new AsyncOdooRPCcall();
                             task2.execute(map2);
@@ -726,8 +1020,37 @@ public class OrderStatusActivity extends AppCompatActivity {
                         }
                     }
                 })
-                .setNegativeButton("No",null)
+                .setCancelable(false)
+                .setNegativeButton("No", new DialogInterface.OnClickListener() {
+                    @Override
+                    public void onClick(DialogInterface dialog, int which) {
+                        dialog.dismiss();
+                    }
+                })
                 .show();
+        alert.getButton(AlertDialog.BUTTON_POSITIVE).setEnabled(false);
+        remark.addTextChangedListener(new TextWatcher() {
+            @Override
+            public void beforeTextChanged(CharSequence s, int start, int count, int after) {
+
+            }
+
+            @Override
+            public void onTextChanged(CharSequence s, int start, int before, int count) {
+
+            }
+
+            @Override
+            public void afterTextChanged(Editable s) {
+                if(remark.getText().length()>0){
+                    alert.getButton(AlertDialog.BUTTON_POSITIVE).setEnabled(true);
+                }else{
+                    alert.getButton(AlertDialog.BUTTON_POSITIVE).setEnabled(false);
+
+                }
+
+            }
+        });
     }
     void reloadActivity(Order orderobj){
         Intent intent =getIntent();
@@ -763,16 +1086,17 @@ public class OrderStatusActivity extends AppCompatActivity {
         active=false;
     }
 
+    @Override
+    protected void onDestroy() {
+        super.onDestroy();
+        active=false;
+    }
+
     void runUpdateThread(final Context context){
         new Thread(new Runnable() {
             @Override
             public void run() {
                 while (active) {
-                    try {
-                        Thread.sleep(10000);
-                    } catch (InterruptedException ex) {
-                        ex.printStackTrace();
-                    }
                     try {
 
                         if (uid == null) {
@@ -793,7 +1117,11 @@ public class OrderStatusActivity extends AppCompatActivity {
                                 task.execute(map);
                             }
                         });
-                        Thread.sleep(3000);
+                        try {
+                            Thread.sleep(10000);
+                        } catch (InterruptedException ex) {
+                            ex.printStackTrace();
+                        }
                     } catch (Exception e) {
                         e.printStackTrace();
 
@@ -801,5 +1129,115 @@ public class OrderStatusActivity extends AppCompatActivity {
                 }
             }
         }).start();
+    }
+    private class DownloadFile extends AsyncTask<String, Void, Void>{
+
+        @Override
+        protected Void doInBackground(String... strings) {
+            String fileName = order.getName()+".pdf";  // -> maven.pdf
+            String extStorageDirectory = Environment.getExternalStorageDirectory().toString();
+            File folder = new File(extStorageDirectory, "Anyservice");
+            folder.mkdir();
+
+            File pdfFile = new File(folder, fileName);
+
+            try{
+                pdfFile.createNewFile();
+            }catch (IOException e){
+                e.printStackTrace();
+            }
+            odooRPC.downloadInvoice(order.getId(), pdfFile);
+            return null;
+        }
+
+        @Override
+        protected void onPreExecute() {
+            runOnUiThread(new Runnable() {
+                @Override
+                public void run() {
+                    if(scrollView.getVisibility()==View.VISIBLE) {
+                        progressBar.setVisibility(View.VISIBLE);
+                        scrollView.setVisibility(View.GONE);
+                    }
+
+                }
+            });
+        }
+
+        @Override
+        protected void onPostExecute(Void aVoid) {
+            runOnUiThread(new Runnable() {
+                @Override
+                public void run() {
+                    if(scrollView.getVisibility()==View.GONE) {
+                        progressBar.setVisibility(View.GONE);
+                        scrollView.setVisibility(View.VISIBLE);
+                    }
+
+                }
+            });
+            File pdfFile = new File(Environment.getExternalStorageDirectory().toString() + "/Anyservice/" + order.getName()+".pdf");  // -> filename = maven.pdf
+            Uri path = FileProvider.getUriForFile(getApplicationContext(),"com.aryan.anyservice.fileprovider",pdfFile);
+            Intent pdfIntent = new Intent(Intent.ACTION_VIEW);
+            pdfIntent.setDataAndType(path, "application/pdf");
+            pdfIntent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP);
+            pdfIntent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
+            pdfIntent.addFlags(Intent.FLAG_ACTIVITY_NO_HISTORY);
+
+            try{
+                startActivity(pdfIntent);
+            }catch(ActivityNotFoundException e){
+                Intent i=new Intent(Intent.ACTION_VIEW,Uri.parse(odooRPC.downloadURL(order.getId())));
+                startActivity(i);
+                Toast.makeText(getApplicationContext(), "No Application available to view PDF", Toast.LENGTH_SHORT).show();
+            }
+        }
+    }
+    final int STORAGE_PERMISSION=13123;
+    void requestPermision(){
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            if (checkSelfPermission(Manifest.permission.READ_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED && checkSelfPermission(Manifest.permission.WRITE_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED)
+            {
+                requestPermissions(new String[]{Manifest.permission.READ_EXTERNAL_STORAGE, Manifest.permission.WRITE_EXTERNAL_STORAGE},STORAGE_PERMISSION);
+            }
+            else
+            {
+                new DownloadFile().execute();
+
+            }
+        }
+    }
+    @Override
+    public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
+        if (requestCode == STORAGE_PERMISSION)
+        {
+            if (grantResults[0] == PackageManager.PERMISSION_GRANTED){
+                new DownloadFile().execute();
+            }
+
+        }
+    }
+
+    @Override
+    protected void onActivityResult(int requestCode, int resultCode, @Nullable Intent data) {
+        super.onActivityResult(requestCode, resultCode, data);
+        if (requestCode == PAYMENTCODE) {
+            if (data.getStringExtra("result").equals("Success")) {
+                HashMap<String, Object> map2 = new HashMap<String, Object>();
+                map2.put("method", "update_order");
+                map2.put("model", "anyservice.order");
+                map2.put("login", uid);
+                map2.put("id", order.getId());
+                map2.put("clientpaid", true);
+                map2.put("msg", "Payment Received Through Online Mode");
+                AsyncOdooRPCcall task2 = new AsyncOdooRPCcall();
+                task2.execute(map2);
+                Toast.makeText(this, "Payment Received" + data.getStringExtra("result"), Toast.LENGTH_SHORT).show();
+            } else {
+                Toast.makeText(this, "Payment Failed", Toast.LENGTH_SHORT).show();
+
+            }
+        }
     }
 }

@@ -5,10 +5,6 @@ import android.content.SharedPreferences;
 import android.os.AsyncTask;
 import android.widget.ProgressBar;
 
-import com.aryan.anyservice.ui.dashboard.DashboardViewModel;
-
-import java.text.ParseException;
-import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -31,7 +27,7 @@ public class NotificationsViewModel extends ViewModel {
         notifications = new MutableLiveData<>();
     }
 
-    public LiveData<List<AnyserviceNotification>> getNotification(Context context) {
+    public void add_notifications(Context context,int offset,int limit){
         if(uid==null){
             SharedPreferences sp = context.getSharedPreferences("odoologin", Context.MODE_PRIVATE);
             uid = sp.getString("login",null);
@@ -42,8 +38,14 @@ public class NotificationsViewModel extends ViewModel {
         map.put("read",true);
         map.put("model","anyservice.notification");
         map.put("login",uid);
+        map.put("offset",offset);
+        map.put("limit",limit);
         AsyncOdooRPCcall task = new AsyncOdooRPCcall();
         task.execute(map);
+
+    }
+
+    public LiveData<List<AnyserviceNotification>> getNotification() {
         return notifications;
     }
     class AsyncOdooRPCcall extends AsyncTask<HashMap<String,Object>, ProgressBar,HashMap<String,Object>> {
@@ -77,12 +79,36 @@ public class NotificationsViewModel extends ViewModel {
                         notification.setModel(notificationResp.get("model"));
                         notification.setDate(notificationResp.get("date"));
                         notification.setRecord(String.valueOf(notificationResp.get("record")));
+                        if(!String.valueOf(notificationResp.get("order")).equals("false")){
+                            Object obj = notificationResp.get("order");
+                            HashMap<String, String> order = (HashMap<String, String>) obj;
+                            Order orderObj = new Order();
+                            orderObj.setId(Integer.parseInt(String.valueOf(order.get("id"))));
+                            orderObj.setCustID(Integer.parseInt(String.valueOf(order.get("cust_id"))));
+                            orderObj.setAgentID(Integer.parseInt(String.valueOf(order.get("agent_id"))));
+                            orderObj.setTotalPrice(Double.parseDouble(String.valueOf(order.get("total_price"))));
+                            orderObj.setName(order.get("name"));
+                            orderObj.setCustName(order.get("cust_name"));
+                            orderObj.setAgentName(order.get("agent_name"));
+                            orderObj.setDescription(order.get("description"));
+                            orderObj.setGpsAddress(order.get("gps_address"));
+                            orderObj.setFullAddress(order.get("full_address"));
+                            orderObj.setState(order.get("state"));
+                            orderObj.setCode(order.get("code"));
+                            orderObj.setCustPhone(order.get("cust_phone"));
+                            orderObj.setAgentPhone(order.get("agent_phone"));
+                            orderObj.setRating(Float.parseFloat(String.valueOf(order.get("rating"))));
+                            orderObj.setInvoicdId(Integer.parseInt(String.valueOf(order.get("invoice_id"))));
+                            orderObj.setOrderDate(order.get("order_date"));
+                            orderObj.setFinalDate(order.get("final_date"));
+                            notification.setOrder(orderObj);
+                        }
                         notificationslist.add(notification);
                     }
                     notifications.postValue(notificationslist);
                 }
-            }catch (Exception e){
-
+            }catch (Exception e) {
+                e.printStackTrace();
             }
 
             return result;

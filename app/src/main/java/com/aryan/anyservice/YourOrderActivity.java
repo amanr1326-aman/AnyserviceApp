@@ -1,42 +1,31 @@
 package com.aryan.anyservice;
 
-import adaptor.ServiceDetailsAdaptor;
-import androidx.appcompat.app.AlertDialog;
-import androidx.appcompat.app.AppCompatActivity;
-import androidx.core.view.LayoutInflaterCompat;
-import de.timroes.axmlrpc.XMLRPCException;
-import helper.OdooRPC;
-import helper.ServiceDetails;
-
 import android.annotation.SuppressLint;
 import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.SharedPreferences;
-import android.database.DataSetObserver;
-import android.graphics.Bitmap;
-import android.graphics.BitmapFactory;
 import android.os.AsyncTask;
 import android.os.Bundle;
-import android.util.Base64;
-import android.util.Log;
-import android.view.LayoutInflater;
 import android.view.View;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.ListView;
 import android.widget.ProgressBar;
 import android.widget.RadioButton;
-import android.widget.RadioGroup;
-import android.widget.SeekBar;
 import android.widget.TextView;
 import android.widget.Toast;
-
-import com.aryan.anyservice.ui.home.HomeViewModel;
 
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
+
+import adaptor.ServiceDetailsAdaptor;
+import androidx.appcompat.app.AlertDialog;
+import androidx.appcompat.app.AppCompatActivity;
+import de.timroes.axmlrpc.XMLRPCException;
+import helper.OdooRPC;
+import helper.ServiceDetails;
 
 public class YourOrderActivity extends AppCompatActivity {
     String uid;
@@ -80,7 +69,7 @@ public class YourOrderActivity extends AppCompatActivity {
         companyTextView.setText(company);
         pendingTextView.setText(""+prevPrice);
 
-        ServiceDetailsAdaptor serviceDetailsAdaptor=new ServiceDetailsAdaptor(getApplicationContext(),R.layout.service_list_item, (List<ServiceDetails>) services);
+        ServiceDetailsAdaptor serviceDetailsAdaptor=new ServiceDetailsAdaptor(getApplicationContext(),R.layout.service_list_item, (List<ServiceDetails>) services,false);
         serviceListView.setAdapter(serviceDetailsAdaptor);
 
         backButton.setOnClickListener(new View.OnClickListener() {
@@ -92,7 +81,6 @@ public class YourOrderActivity extends AppCompatActivity {
         confirmButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-//                LayoutInflater inflater = LayoutInflaterCompat..from(getApplicationContext());
                 View layout = getLayoutInflater().inflate(R.layout.order_description,null);
                 final EditText gpsAddress=layout.findViewById(R.id.gps_address);
                 final EditText fullAddress=layout.findViewById(R.id.full_address);
@@ -194,7 +182,6 @@ public class YourOrderActivity extends AppCompatActivity {
                     }
                 }
             }catch (Exception e){
-                Log.e("ODOO RPC :",e.getMessage());
 
                 runOnUiThread(new Runnable() {
                     @Override

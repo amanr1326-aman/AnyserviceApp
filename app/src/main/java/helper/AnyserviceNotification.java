@@ -5,6 +5,16 @@ public class AnyserviceNotification {
     String message;
     String model;
 
+    public Order getOrder() {
+        return order;
+    }
+
+    public void setOrder(Order order) {
+        this.order = order;
+    }
+
+    Order order;
+
     public String getDate() {
         return date;
     }

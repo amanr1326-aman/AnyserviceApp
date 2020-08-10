@@ -6,7 +6,7 @@
     <helper.IconTextView
         android:id="@+id/user_icon_textview"
         android:layout_width="0dp"
-        android:layout_weight="1"
+        android:layout_weight="0.1"
         android:textSize="35sp"
         android:padding="0dp"
         style="@style/Widget.AppCompat.Button.Borderless"
@@ -16,7 +16,7 @@
     <LinearLayout
         android:layout_width="0dp"
         android:layout_height="wrap_content"
-        android:layout_weight="4"
+        android:layout_weight="0.6"
         android:layout_gravity="center_vertical"
         android:gravity="left"
         android:orientation="vertical">
@@ -49,7 +49,6 @@
         </LinearLayout>
         <androidx.appcompat.widget.AppCompatSpinner
             android:id="@+id/location_spinner"
-            android:spinnerMode="dialog"
             android:layout_width="wrap_content"
             android:visibility="gone"
             android:layout_height="wrap_content"/>
@@ -58,16 +57,18 @@
         android:layout_width="0dp"
         android:layout_height="wrap_content"
         android:layout_gravity="center_vertical"
-        android:layout_weight="1"
+        android:layout_weight="0.2"
         android:orientation="vertical">
         <helper.IconTextView
-            style="@style/Widget.AppCompat.Button.Borderless"
-            android:layout_width="40dp"
-            android:textSize="20sp"
-            android:padding="0dp"
-            android:layout_gravity="right"
-            android:text="@string/icon_setting"
-            android:layout_height="wrap_content"/>
+            android:id="@+id/wallet"
+            android:textAppearance="@style/TextAppearance.AppCompat.Widget.Button.Borderless.Colored"
+            android:layout_width="match_parent"
+            android:padding="2dp"
+            android:gravity="center"
+            android:textColor="@color/colorWhite"
+            android:layout_height="wrap_content"
+            android:background="@color/colorPrimary"
+            android:text="@string/icon_wallet"/>
     </LinearLayout>
 
 

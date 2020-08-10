@@ -1,7 +1,6 @@
 package helper;
 
 import java.io.Serializable;
-import java.util.Date;
 
 public class Order implements Serializable {
     public int getId() {
@@ -28,19 +27,19 @@ public class Order implements Serializable {
         this.agentID = agentID;
     }
 
-    public Date getOrderDate() {
+    public String getOrderDate() {
         return orderDate;
     }
 
-    public void setOrderDate(Date orderDate) {
+    public void setOrderDate(String orderDate) {
         this.orderDate = orderDate;
     }
 
-    public Date getFinalDate() {
+    public String getFinalDate() {
         return finalDate;
     }
 
-    public void setFinalDate(Date finalDate) {
+    public void setFinalDate(String finalDate) {
         this.finalDate = finalDate;
     }
 
@@ -109,7 +108,7 @@ public class Order implements Serializable {
     }
 
     int id,custID,agentID;
-    Date orderDate,finalDate;
+    String orderDate,finalDate;
     String name;
     String custName;
     String agentName;
@@ -117,6 +116,16 @@ public class Order implements Serializable {
     String gpsAddress;
     String fullAddress;
     String state;
+
+    public int getInvoicdId() {
+        return invoicdId;
+    }
+
+    public void setInvoicdId(int invoicdId) {
+        this.invoicdId = invoicdId;
+    }
+
+    int invoicdId;
 
     public String getCustPhone() {
         return custPhone;
@@ -156,6 +165,16 @@ public class Order implements Serializable {
     }
 
     float rating;
+
+    public String getCode() {
+        return code;
+    }
+
+    public void setCode(String code) {
+        this.code = code;
+    }
+
+    String code;
 
 
 }

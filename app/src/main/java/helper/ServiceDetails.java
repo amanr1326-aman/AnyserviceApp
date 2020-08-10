@@ -7,6 +7,26 @@ public class ServiceDetails implements Serializable {
     private String company;
     private String category;
     private String icon;
+
+    public boolean isVerified() {
+        return verified;
+    }
+
+    public void setVerified(boolean verified) {
+        this.verified = verified;
+    }
+
+    boolean verified;
+
+    public String getDescription() {
+        return description;
+    }
+
+    public void setDescription(String description) {
+        this.description = description;
+    }
+
+    private String description;
     private int unit=1,id,agent_id;
     private float rating;
     private double price;
@@ -17,7 +37,7 @@ public class ServiceDetails implements Serializable {
     }
 
     private double balance;
-    private boolean selected=false,measurable=false;
+    private boolean selected=false,measurable=false,deliveryCostable=false;
 
     public String getName() {
         return name;
@@ -121,5 +141,13 @@ public class ServiceDetails implements Serializable {
 
     public void setBalance(double balance) {
         this.balance = balance;
+    }
+
+    public boolean isDeliveryCostable() {
+        return deliveryCostable;
+    }
+
+    public void setDeliveryCostable(boolean deliveryCostable) {
+        this.deliveryCostable = deliveryCostable;
     }
 }
