@@ -11,18 +11,22 @@ import android.util.Base64;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
 import android.widget.Button;
 import android.widget.CheckBox;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.RatingBar;
+import android.widget.Spinner;
 import android.widget.TextView;
 
 import com.aryan.anyservice.LargeImageActivity;
 import com.aryan.anyservice.R;
 import com.aryan.anyservice.ServiceActivity;
 
+import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 
 import androidx.annotation.NonNull;
@@ -61,6 +65,107 @@ public class ServiceDetailsAdaptor extends ArrayAdapter<ServiceDetails> {
             RatingBar rating = v.findViewById(R.id.service_rating);
             ImageView icon = v.findViewById(R.id.service_icon);
             ImageView verified = v.findViewById(R.id.verified);
+            final Spinner colorspinner = v.findViewById(R.id.colorspinner);
+            final Spinner sizespinner = v.findViewById(R.id.sizespinner);
+            final Spinner otherspinner = v.findViewById(R.id.otherspinner);
+            LinearLayout colorLayout = v.findViewById(R.id.color);
+            LinearLayout sizeLayout = v.findViewById(R.id.size);
+            LinearLayout otherLayout = v.findViewById(R.id.other);
+
+            List<String> colors=new ArrayList<>();
+            List<String> sizes=new ArrayList<>();
+            List<String> others=new ArrayList<>();
+
+            List<HashMap<String,String>> vars= p.getVariants();
+            if(vars!=null) {
+                for (HashMap<String, String> map : vars) {
+                    for (String key : map.keySet()) {
+                        if (key.equals("Color")) {
+                            colors.add(map.get(key));
+                        } else if (key.equals("Size")) {
+                            sizes.add(map.get(key));
+                        } else {
+                            others.add(map.get(key));
+                        }
+                    }
+                }
+                colorspinner.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
+                    @Override
+                    public void onItemSelected(AdapterView<?> adapterView, View view, int i, long l) {
+                        p.setSelectedColor(colorspinner.getSelectedItem().toString());
+
+                    }
+
+                    @Override
+                    public void onNothingSelected(AdapterView<?> adapterView) {
+
+                    }
+                });
+                sizespinner.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
+                    @Override
+                    public void onItemSelected(AdapterView<?> adapterView, View view, int i, long l) {
+                        p.setSelectedSize(sizespinner.getSelectedItem().toString());
+
+                    }
+
+                    @Override
+                    public void onNothingSelected(AdapterView<?> adapterView) {
+
+                    }
+                });
+                otherspinner.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
+                    @Override
+                    public void onItemSelected(AdapterView<?> adapterView, View view, int i, long l) {
+                        p.setSelectedOthers(otherspinner.getSelectedItem().toString());
+
+                    }
+
+                    @Override
+                    public void onNothingSelected(AdapterView<?> adapterView) {
+
+                    }
+                });
+                if (colors.size()>0){
+                    ArrayAdapter arrayAdapter = new ArrayAdapter(getContext(), android.R.layout.simple_spinner_item, colors);
+                    colorspinner.setAdapter(arrayAdapter);
+                    colorLayout.setVisibility(View.VISIBLE);
+                    if(p.getSelectedColor()!=null){
+                        colorspinner.setSelection(colors.indexOf(p.getSelectedColor()));
+                    }else{
+                        p.setSelectedColor(colorspinner.getSelectedItem().toString());
+
+                    }
+                }else{
+                    colorLayout.setVisibility(View.GONE);
+                }
+                if (sizes.size()>0){
+                    ArrayAdapter arrayAdapter = new ArrayAdapter(getContext(), android.R.layout.simple_spinner_item, sizes);
+                    sizespinner.setAdapter(arrayAdapter);
+                    sizeLayout.setVisibility(View.VISIBLE);
+                    if(p.getSelectedSize()!=null){
+                        sizespinner.setSelection(sizes.indexOf(p.getSelectedSize()));
+                    }else{
+                        p.setSelectedSize(sizespinner.getSelectedItem().toString());
+
+                    }
+                }else{
+                    sizeLayout.setVisibility(View.GONE);
+                }
+                if (others.size()>0){
+                    ArrayAdapter arrayAdapter = new ArrayAdapter(getContext(), android.R.layout.simple_spinner_item, others);
+                    otherspinner.setAdapter(arrayAdapter);
+                    otherLayout.setVisibility(View.VISIBLE);
+                    if(p.getSelectedOthers()!=null){
+                        otherspinner.setSelection(others.indexOf(p.getSelectedOthers()));
+                    }else{
+                        p.setSelectedOthers(otherspinner.getSelectedItem().toString());
+
+                    }
+                }else{
+                    otherLayout.setVisibility(View.GONE);
+                }
+
+            }
 
             if(p.isVerified()){
                 verified.setVisibility(View.VISIBLE);
@@ -284,6 +389,29 @@ public class ServiceDetailsAdaptor extends ArrayAdapter<ServiceDetails> {
             CheckBox delivery = v.findViewById(R.id.delivery);
             CheckBox measurable = v.findViewById(R.id.measurable);
             ImageView icon = v.findViewById(R.id.service_icon);
+            TextView variants = v.findViewById(R.id.varianttextview);
+
+            if(p.getVariants()==null){
+                variants.setVisibility(View.GONE);
+            }else if(p.getVariants().size()==0){
+                variants.setVisibility(View.GONE);
+
+            }else{
+                variants.setVisibility(View.VISIBLE);
+                String var="Available Variants:";
+                List<HashMap<String,String>> vars= p.getVariants();
+//                ArrayAdapter<String> variantnameadapter=new ArrayAdapter<>(mContext,R.layout.spinner_item,varlist);
+//                variants.setAdapter(variantnameadapter);
+                for(HashMap<String,String> map:vars) {
+                    for (String key : map.keySet()) {
+                        var=var+"\n"+key + "  -  " + map.get(key);
+                    }
+                }
+                variants.setText(var);
+//                variantnameadapter.notifyDataSetChanged();
+//                Utility.setListViewHeightBasedOnChildren(variants);
+
+            }
             RatingBar rating = v.findViewById(R.id.service_rating);
             rating.setRating(p.getRating());
             icon.setOnClickListener(new View.OnClickListener() {
@@ -454,7 +582,7 @@ public class ServiceDetailsAdaptor extends ArrayAdapter<ServiceDetails> {
             TextView name = v.findViewById(R.id.select_service_name);
             final TextView price = v.findViewById(R.id.select_service_price);
             if(p.getUnit()>1){
-                if (p.getName() != null) name.setText(p.getName()+"(@ "+p.getUnit()+" Units)");
+                if (p.getName() != null) name.setText(p.getName()+"\n(@ "+p.getUnit()+" Units)");
             }else {
                 if (p.getName() != null) name.setText(p.getName());
             }

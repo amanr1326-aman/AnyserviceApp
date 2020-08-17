@@ -48,9 +48,11 @@ import androidx.annotation.Nullable;
 import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.widget.AppCompatEditText;
+import androidx.appcompat.widget.AppCompatSpinner;
 import de.timroes.axmlrpc.XMLRPCException;
 import helper.OdooRPC;
 import helper.ServiceDetails;
+import helper.Utility;
 
 public class CreateServiceActivity extends AppCompatActivity {
     String searchKey=null;
@@ -60,7 +62,7 @@ public class CreateServiceActivity extends AppCompatActivity {
     CheckBox measurable,deliverCost;
     AutoCompleteTextView category;
     OdooRPC odooRPC;
-    ListView myservices;
+    ListView myservices,variantListView;
     String uid;
     FloatingActionButton actionButton;
     ScrollView layout;
@@ -73,9 +75,15 @@ public class CreateServiceActivity extends AppCompatActivity {
     final int limit=10;
     boolean loading=true,loadNew=false;
     AppCompatEditText searchEditText;
+    EditText variantValue;
+    AppCompatSpinner variantName;
+    Button addButton;
     Timer timer;
+    String variantnames[]= {"Color","Size","Others"};
 
     List<ServiceDetails> listService = new ArrayList<>();
+    List<String> variants = new ArrayList<>();
+    List<HashMap<String,String>> variantmap=new ArrayList<>();
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -92,11 +100,53 @@ public class CreateServiceActivity extends AppCompatActivity {
         progressBar= findViewById(R.id.progress);
         description= findViewById(R.id.description);
         searchEditText = findViewById(R.id.search_edittext);
+        variantName = findViewById(R.id.variant_name);
+        variantValue = findViewById(R.id.variant_value);
+        addButton = findViewById(R.id.add_button);
+        variantListView = findViewById(R.id.variant_listview);
         Button backButton = findViewById(R.id.back_button);
         backButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
                 onBackPressed();
+            }
+        });
+        ArrayAdapter<String> variantnameadapter=new ArrayAdapter<>(getApplicationContext(),android.R.layout.simple_list_item_1,variantnames);
+        variantName.setAdapter(variantnameadapter);
+
+        final ArrayAdapter<String> variantadapter=new ArrayAdapter<>(getApplicationContext(),android.R.layout.simple_list_item_1,variants);
+        variantListView.setAdapter(variantadapter);
+
+        addButton.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                if(!variantName.getSelectedItem().toString().equals("") && ! variantValue.getText().toString().equals("")){
+                    if(variantValue.getText().toString().contains(",")) {
+                        String keys[] = variantValue.getText().toString().split(",");
+                        for(String key:keys){
+                            variants.add(variantName.getSelectedItem().toString().trim() + "  -  " + key.trim());
+                            HashMap<String,String> v= new HashMap<>();
+                            v.put("name",variantName.getSelectedItem().toString().trim());
+                            v.put("value",key.trim());
+                            variantmap.add(v);
+                        }
+                    }else {
+                        variants.add(variantName.getSelectedItem().toString().trim() + "  -  " + variantValue.getText().toString().trim());
+                        HashMap<String,String> v= new HashMap<>();
+                        v.put("name",variantName.getSelectedItem().toString().trim());
+                        v.put("value",variantValue.getText().toString().trim());
+                        variantmap.add(v);
+                    }
+                    variantadapter.notifyDataSetChanged();
+                    Utility.setListViewHeightBasedOnChildren(variantListView);
+                    variantValue.setText("");
+                    Snackbar.make(layout,"Variants Added",Snackbar.LENGTH_LONG).show();
+                }else{
+                    if(variantName.getSelectedItem().toString().equals("")){
+                    }else{
+                        variantValue.setError("This Field is required");
+                    }
+                }
             }
         });
 
@@ -308,7 +358,6 @@ public class CreateServiceActivity extends AppCompatActivity {
                                     public void onClick(View v) {
                                         if(!click) {
                                             click=true;
-                                            imageLoaded=false;
                                             actionButton.setImageDrawable(getResources().getDrawable(R.drawable.ic_baseline_done_24));
                                             layout.setVisibility(View.VISIBLE);
                                         }else{
@@ -329,6 +378,7 @@ public class CreateServiceActivity extends AppCompatActivity {
                                                 map.put("category",category.getText().toString());
                                                 map.put("description",description.getText().toString());
                                                 map.put("measurable",measurable.isChecked());
+                                                map.put("variants",variantmap);
                                                 map.put("delivery_charge",deliverCost.isChecked());
                                                 map.put("login",uid);
                                                 map.put("price",Double.parseDouble(price.getText().toString()));
@@ -356,12 +406,12 @@ public class CreateServiceActivity extends AppCompatActivity {
 
                         final List<ServiceDetails> list = new ArrayList<>();
                         for (Object obj : objects) {
-                            HashMap<String, String> service = (HashMap<String, String>) obj;
+                            HashMap<String, Object> service = (HashMap<String, Object>) obj;
                             ServiceDetails serviceDetails = new ServiceDetails();
                             serviceDetails.setId(Integer.parseInt(String.valueOf(service.get("id"))));
                             serviceDetails.setAgent_id(Integer.parseInt(String.valueOf(service.get("agent_id"))));
-                            serviceDetails.setName(service.get("name"));
-                            serviceDetails.setCategory(service.get("category"));
+                            serviceDetails.setName(service.get("name").toString());
+                            serviceDetails.setCategory(service.get("category").toString());
                             serviceDetails.setPrice(Double.parseDouble(String.valueOf(service.get("price"))));
                             serviceDetails.setDeliveryCost(Double.parseDouble(String.valueOf(service.get("charge"))));
                             serviceDetails.setBalance(Double.parseDouble(String.valueOf(service.get("balance"))));
@@ -373,6 +423,14 @@ public class CreateServiceActivity extends AppCompatActivity {
                                 Object rating = service.get("rating");
                                 serviceDetails.setRating(Float.parseFloat(rating.toString()));
                             }
+                            Object[] variants = (Object[]) service.get("variants");
+
+                            List<HashMap<String,String>> variantobjs=new ArrayList<>();
+                            for(Object var:variants){
+                                HashMap<String, String> varmap = (HashMap<String, String>) var;
+                                variantobjs.add(varmap);
+                            }
+                            serviceDetails.setVariants(variantobjs);
                             list.add(serviceDetails);
                         }
                         runOnUiThread(new Runnable() {

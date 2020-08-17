@@ -173,7 +173,6 @@ public class ProfileActivity extends AppCompatActivity {
             @Override
             public void onClick(View v) {
                 if ((customerRadioButton.isChecked() && !fullnameEditText.getText().toString().equals(""))||(!pinEditText.getText().equals("") && !street2EditText.getText().toString().equals("") && !street1EditText.getText().toString().equals("") && !fullnameEditText.getText().toString().equals(""))) {
-//                        backButton.setEnabled(false);
                     emailEditText.setEnabled(false);
                     gstEditText.setEnabled(false);
                     fullnameEditText.setEnabled(false);

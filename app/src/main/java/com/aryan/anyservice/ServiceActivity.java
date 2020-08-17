@@ -232,18 +232,26 @@ public class ServiceActivity extends AppCompatActivity {
                         Object[] objects = (Object[]) result.get("services");
                         final List<ServiceDetails> list = new ArrayList<>();
                         for (Object obj : objects) {
-                            HashMap<String, String> service = (HashMap<String, String>) obj;
+                            HashMap<String, Object> service = (HashMap<String, Object>) obj;
                             ServiceDetails serviceDetails = new ServiceDetails();
                             serviceDetails.setId(Integer.parseInt(String.valueOf(service.get("id"))));
                             serviceDetails.setAgent_id(Integer.parseInt(String.valueOf(service.get("agent_id"))));
-                            serviceDetails.setName(service.get("name"));
-                            serviceDetails.setCompany(service.get("company"));
-                            serviceDetails.setCategory(service.get("category"));
+                            serviceDetails.setName(service.get("name").toString());
+                            serviceDetails.setCompany(service.get("company").toString());
+                            serviceDetails.setCategory(service.get("category").toString());
                             serviceDetails.setPrice(Double.parseDouble(String.valueOf(service.get("price"))));
                             serviceDetails.setDeliveryCost(Double.parseDouble(String.valueOf(service.get("charge"))));
                             serviceDetails.setBalance(Double.parseDouble(String.valueOf(service.get("balance"))));
                             serviceDetails.setMeasurable(Boolean.parseBoolean(String.valueOf(service.get("is_measurable"))));
                             serviceDetails.setDescription(String.valueOf(service.get("description")));
+                            Object[] variants = (Object[]) service.get("variants");
+
+                            List<HashMap<String,String>> variantobjs=new ArrayList<>();
+                            for(Object var:variants){
+                                HashMap<String, String> varmap = (HashMap<String, String>) var;
+                                variantobjs.add(varmap);
+                            }
+                            serviceDetails.setVariants(variantobjs);
                             if (service.get("rating") != null) {
                                 Object rating = service.get("rating");
                                 serviceDetails.setRating(Float.parseFloat(rating.toString()));
@@ -251,7 +259,7 @@ public class ServiceActivity extends AppCompatActivity {
                             if (serviceDetails.getId() != serviceChecked.getId()) {
                                 list.add(serviceDetails);
                             }
-                            serviceDetails.setIcon(service.get("image"));
+                            serviceDetails.setIcon(service.get("image").toString());
                         }
                         final HashMap<String, Object> finalResult = result;
                         runOnUiThread(new Runnable() {

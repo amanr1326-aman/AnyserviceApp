@@ -26,6 +26,7 @@ public class WelcomeActivity extends AppCompatActivity {
     ProgressBar progressBar;
     Boolean result;
     Button button;
+    String uid;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -61,6 +62,12 @@ public class WelcomeActivity extends AppCompatActivity {
         task.execute(map);
         instruction.setMovementMethod(new ScrollingMovementMethod());
 
+
+
+
+
+
+
     }
     @SuppressLint("StaticFieldLeak")
     class AsyncOdooRPCcall extends AsyncTask<HashMap<String,Object>, ProgressBar,HashMap<String,String>> {
@@ -88,6 +95,8 @@ public class WelcomeActivity extends AppCompatActivity {
                             instruction.setText(finalResult.get("instruction"));
                         }
                     });
+
+                }else if (method.equals("set_token")){
 
                 }
             }catch (Exception e){

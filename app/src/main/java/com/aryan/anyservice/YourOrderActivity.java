@@ -12,7 +12,6 @@ import android.widget.Button;
 import android.widget.EditText;
 import android.widget.ListView;
 import android.widget.ProgressBar;
-import android.widget.RadioButton;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -54,6 +53,18 @@ public class YourOrderActivity extends AppCompatActivity {
         double totalPrice = getIntent().getDoubleExtra("totalPrice",0);
         String company = getIntent().getStringExtra("company");
         services = getIntent().getParcelableArrayListExtra("services");
+        for(ServiceDetails serviceDetails:services ){
+
+            if(serviceDetails.getSelectedColor()!=null){
+                serviceDetails.setName(serviceDetails.getName()+"\nColor - "+serviceDetails.getSelectedColor());
+            }
+            if(serviceDetails.getSelectedSize()!=null){
+                serviceDetails.setName(serviceDetails.getName()+"\nSize - "+serviceDetails.getSelectedSize());
+            }
+            if(serviceDetails.getSelectedOthers()!=null){
+                serviceDetails.setName(serviceDetails.getName()+"\n"+serviceDetails.getSelectedOthers());
+            }
+        }
 
         backButton = findViewById(R.id.back_button);
         confirmButton = findViewById(R.id.confirm);
@@ -85,10 +96,9 @@ public class YourOrderActivity extends AppCompatActivity {
                 final EditText gpsAddress=layout.findViewById(R.id.gps_address);
                 final EditText fullAddress=layout.findViewById(R.id.full_address);
                 final EditText remark=layout.findViewById(R.id.remark);
-                final RadioButton cod=layout.findViewById(R.id.cod);
                 final Button placeOrder=layout.findViewById(R.id.place_order);
                 final ProgressBar progress=layout.findViewById(R.id.progressbar);
-                final ArrayList<HashMap<String,Integer>> serviceIds=new ArrayList<>();
+                final ArrayList<HashMap<String,String>> serviceIds=new ArrayList<>();
                 final AlertDialog alertDialog = new AlertDialog.Builder(YourOrderActivity.this)
                                 .setTitle("Place Order")
                                 .setIcon(R.mipmap.any_service_icon_foreground)
@@ -96,15 +106,16 @@ public class YourOrderActivity extends AppCompatActivity {
                                 .show();
                 gpsAddress.setText(address);
                 for(ServiceDetails service:services){
-                    HashMap<String,Integer> map=new HashMap();
-                    map.put("id",service.getId());
-                    map.put("quantity",service.getUnit());
+                    HashMap<String,String> map=new HashMap();
+                    map.put("id",""+service.getId());
+                    map.put("quantity",""+service.getUnit());
+                    map.put("variant",service.getName());
                     serviceIds.add(map);
                 }
                 placeOrder.setOnClickListener(new View.OnClickListener() {
                     @Override
                     public void onClick(View v) {
-                        if(cod.isChecked() && !fullAddress.getText().toString().equals("") && !remark.getText().toString().equals("")) {
+                        if(!fullAddress.getText().toString().equals("")) {
                             progress.setVisibility(View.VISIBLE);
                             placeOrder.setEnabled(false);
                             HashMap map = new HashMap<String, String>();
@@ -116,7 +127,12 @@ public class YourOrderActivity extends AppCompatActivity {
                             map.put("pending", prevPrice);
                             map.put("gps_address", gpsAddress.getText().toString());
                             map.put("full_address", fullAddress.getText().toString());
-                            map.put("remark", remark.getText().toString());
+                            if(remark.getText().toString().equals("")){
+                                map.put("remark", "No Remarks");
+
+                            }else {
+                                map.put("remark", remark.getText().toString());
+                            }
 
 
                             AsyncOdooRPCcall task = new AsyncOdooRPCcall();
@@ -127,8 +143,6 @@ public class YourOrderActivity extends AppCompatActivity {
                             fullAddress.setError("This Field is required");
                         }else if(remark.getText().toString().equals("")){
                             remark.setError("This Field is required");
-                        }else if(!cod.isChecked()){
-                            cod.setError("This Field is Required");
                         }
                     }
                 });
@@ -149,7 +163,7 @@ public class YourOrderActivity extends AppCompatActivity {
             HashMap<String, Object> result=null;
             try {
                 if (odooRPC == null) {
-                    odooRPC = new OdooRPC();
+                    odooRPC = new OdooRPC("http://148.66.142.98:8069");
                     try {
                         odooRPC.login();
                     } catch (XMLRPCException e) {

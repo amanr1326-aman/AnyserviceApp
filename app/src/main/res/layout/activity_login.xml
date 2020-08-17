@@ -497,8 +497,6 @@
                             android:hint="@string/gst"
                             android:layout_marginVertical="5dp"
                             android:background="@drawable/rounded_edittext"
-                            android:inputType="number"
-                            android:maxLength="15"
                             android:padding="10dp"/>
                     </com.google.android.material.textfield.TextInputLayout>
                     <com.google.android.material.textfield.TextInputLayout

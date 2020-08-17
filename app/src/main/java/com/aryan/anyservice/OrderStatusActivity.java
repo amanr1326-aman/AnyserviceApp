@@ -27,7 +27,6 @@ import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.ListView;
 import android.widget.ProgressBar;
-import android.widget.RadioButton;
 import android.widget.RatingBar;
 import android.widget.ScrollView;
 import android.widget.TextView;
@@ -668,7 +667,11 @@ public class OrderStatusActivity extends AppCompatActivity {
         icon.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-//                order.
+                Intent intent =new Intent(v.getContext(), LargeImageActivity.class);
+                intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+                intent.putExtra("order_id",order.getId());
+                v.getContext().startActivity(intent);
+
             }
         });
 
@@ -690,7 +693,6 @@ public class OrderStatusActivity extends AppCompatActivity {
                 final EditText gpsAddress=layout.findViewById(R.id.gps_address);
                 final EditText fullAddress=layout.findViewById(R.id.full_address);
                 final EditText remark=layout.findViewById(R.id.remark);
-                final RadioButton cod=layout.findViewById(R.id.cod);
                 final Button placeOrder=layout.findViewById(R.id.place_order);
                 final TextView yourItems=layout.findViewById(R.id.your_items);
                 yourItems.setVisibility(View.VISIBLE);
@@ -708,7 +710,6 @@ public class OrderStatusActivity extends AppCompatActivity {
                 fullAddress.setEnabled(false);
                 remark.setText(order.getDescription());
                 remark.setEnabled(false);
-                cod.setEnabled(false);
                 placeOrder.setVisibility(View.GONE);
                 new AlertDialog.Builder(OrderStatusActivity.this)
                         .setTitle("Order Details")

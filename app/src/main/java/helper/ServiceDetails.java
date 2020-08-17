@@ -1,12 +1,52 @@
 package helper;
 
 import java.io.Serializable;
+import java.util.HashMap;
+import java.util.List;
 
 public class ServiceDetails implements Serializable {
     private String name;
     private String company;
     private String category;
     private String icon;
+    private String selectedColor;
+
+    public String getSelectedColor() {
+        return selectedColor;
+    }
+
+    public void setSelectedColor(String selectedColor) {
+        this.selectedColor = selectedColor;
+    }
+
+    public String getSelectedSize() {
+        return selectedSize;
+    }
+
+    public void setSelectedSize(String selectedSize) {
+        this.selectedSize = selectedSize;
+    }
+
+    public String getSelectedOthers() {
+        return selectedOthers;
+    }
+
+    public void setSelectedOthers(String selectedOthers) {
+        this.selectedOthers = selectedOthers;
+    }
+
+    private String selectedSize;
+    private String selectedOthers;
+
+    public List<HashMap<String, String>> getVariants() {
+        return variants;
+    }
+
+    public void setVariants(List<HashMap<String, String>> variants) {
+        this.variants = variants;
+    }
+
+    private List<HashMap<String,String>> variants;
 
     public boolean isVerified() {
         return verified;

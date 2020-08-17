@@ -192,14 +192,14 @@ public class HomeViewModel extends ViewModel {
                         Object[] objects = (Object[]) result.get("services");
                         List<ServiceDetails> list = new ArrayList<>();
                         for (Object obj : objects) {
-                            HashMap<String, String> service = (HashMap<String, String>) obj;
+                            HashMap<String, Object> service = (HashMap<String, Object>) obj;
                             ServiceDetails serviceDetails = new ServiceDetails();
                             serviceDetails.setId(Integer.parseInt(String.valueOf(service.get("id"))));
                             serviceDetails.setAgent_id(Integer.parseInt(String.valueOf(service.get("agent_id"))));
-                            serviceDetails.setCompany(service.get("company"));
+                            serviceDetails.setCompany(service.get("company").toString());
                             serviceDetails.setVerified(Boolean.parseBoolean(String.valueOf(service.get("verified"))));
-                            serviceDetails.setName(service.get("name"));
-                            serviceDetails.setCategory(service.get("category"));
+                            serviceDetails.setName(service.get("name").toString());
+                            serviceDetails.setCategory(service.get("category").toString());
                             serviceDetails.setPrice(Double.parseDouble(String.valueOf(service.get("price"))));
                             serviceDetails.setDeliveryCost(Double.parseDouble(String.valueOf(service.get("charge"))));
                             serviceDetails.setBalance(Double.parseDouble(String.valueOf(service.get("balance"))));
@@ -211,7 +211,15 @@ public class HomeViewModel extends ViewModel {
                             }
                             Object image = service.get("image");
                             if (image.getClass() != Boolean.class)
-                                serviceDetails.setIcon(service.get("image"));
+                                serviceDetails.setIcon(service.get("image").toString());
+                            Object[] variants = (Object[]) service.get("variants");
+
+                            List<HashMap<String,String>> variantobjs=new ArrayList<>();
+                            for(Object var:variants){
+                                HashMap<String, String> varmap = (HashMap<String, String>) var;
+                                variantobjs.add(varmap);
+                            }
+                            serviceDetails.setVariants(variantobjs);
                             list.add(serviceDetails);
                         }
                             services.postValue(list);

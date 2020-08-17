@@ -2,7 +2,6 @@ package com.aryan.anyservice;
 
 import android.Manifest;
 import android.annotation.SuppressLint;
-import android.app.ActivityManager;
 import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
@@ -21,9 +20,14 @@ import android.widget.TextView;
 import android.widget.Toast;
 
 import com.google.android.gms.common.ConnectionResult;
+import com.google.android.gms.common.GoogleApiAvailability;
 import com.google.android.gms.common.api.GoogleApiClient;
 import com.google.android.gms.location.LocationServices;
+import com.google.android.gms.tasks.OnCompleteListener;
+import com.google.android.gms.tasks.Task;
 import com.google.android.material.bottomnavigation.BottomNavigationView;
+import com.google.firebase.iid.FirebaseInstanceId;
+import com.google.firebase.iid.InstanceIdResult;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -61,31 +65,41 @@ public class HomeActivity extends AppCompatActivity {
         moveTaskToBack(true);
     }
 
-    private boolean isMyServiceRunning(Class<?> serviceClass) {
-        ActivityManager manager = (ActivityManager) getSystemService(Context.ACTIVITY_SERVICE);
-        for (ActivityManager.RunningServiceInfo service : manager.getRunningServices(Integer.MAX_VALUE)) {
-            if (serviceClass.getName().equals(service.service.getClassName())) {
-                return true;
-            }
-        }
-        return false;
-    }
-
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_home);
 
         requestPermission();
-        if(!isMyServiceRunning(NotifyService.class)) {
 
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                startForegroundService(new Intent(HomeActivity.this, NotifyService.class));
-            } else {
-                startService(new Intent(HomeActivity.this, NotifyService.class));
-            }
+
+        if(GoogleApiAvailability.getInstance().isGooglePlayServicesAvailable(this)!= ConnectionResult.SUCCESS){
+            GoogleApiAvailability.getInstance().makeGooglePlayServicesAvailable(this);
         }
+        FirebaseInstanceId.getInstance().getInstanceId()
+                .addOnCompleteListener(new OnCompleteListener<InstanceIdResult>() {
+                    @Override
+                    public void onComplete(@NonNull Task<InstanceIdResult> task) {
+                        if (!task.isSuccessful()) {
+                            return;
+                        }
 
+                        // Get new Instance ID token
+                        String token = task.getResult().getToken();
+                        if(uid==null) {
+                            SharedPreferences sp = getApplicationContext().getSharedPreferences("odoologin", Context.MODE_PRIVATE);
+                            uid = sp.getString("login", null);
+                        }
+                        HashMap map = new HashMap<String,String>();
+                        map.put("method","set_token");
+                        map.put("token",token);
+                        map.put("model","res.partner");
+                        map.put("login",uid);
+                        AsyncOdooRPCcall task1 = new AsyncOdooRPCcall();
+                        task1.execute(map);
+
+                    }
+                });
 
         ActionBar actionBar = getSupportActionBar();
         if (actionBar != null) {
@@ -193,6 +207,7 @@ public class HomeActivity extends AppCompatActivity {
                 map.put("lat",mLastLocation.getLatitude());
                 map.put("long",mLastLocation.getLongitude());
                 final HashMap<String,Object> result = (HashMap<String, Object>) new AsyncOdooRPCcall().execute(map).get();
+
 
                 runOnUiThread(new Runnable() {
                     @Override
@@ -302,6 +317,8 @@ public class HomeActivity extends AppCompatActivity {
                             wallet.setText(String.format("%s %s", getResources().getString(R.string.icon_wallet), String.valueOf(finalResult.get("balance"))));
                         }
                     });
+
+                }else if (method.equals("set_token")){
 
                 }
             }catch (Exception e){

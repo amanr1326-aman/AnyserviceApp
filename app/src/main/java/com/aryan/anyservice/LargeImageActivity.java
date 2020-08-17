@@ -53,10 +53,15 @@ public class LargeImageActivity extends AppCompatActivity implements View.OnTouc
         iv=findViewById(R.id.image);
         progressBar=findViewById(R.id.progress);
         int image=getIntent().getIntExtra("image",0);
+        int orderId=getIntent().getIntExtra("order_id",0);
         HashMap map = new HashMap<String, String>();
         map.put("method", "load_image");
         map.put("model", "anyservice.service");
-        map.put("id", image);
+        if(orderId>0){
+            map.put("order_id", orderId);
+        }else {
+            map.put("id", image);
+        }
 
 
         AsyncOdooRPCcall task = new AsyncOdooRPCcall();

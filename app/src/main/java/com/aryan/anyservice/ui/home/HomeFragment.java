@@ -294,9 +294,10 @@ public class HomeFragment extends Fragment {
 
                                 }
                                 loading=true;
-                                key++;
-                                homeViewModel.updateServices(map,0,limit,SORTBY.get(sortyby.getSelectedItem().toString()));
-
+                                if(!loading) {
+                                    key++;
+                                    homeViewModel.updateServices(map, 0, limit, SORTBY.get(sortyby.getSelectedItem().toString()));
+                                }
                             }
                         }
 

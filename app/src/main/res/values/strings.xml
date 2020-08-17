@@ -130,5 +130,9 @@
     <string name="contact_us">Contact Us</string>
     <string name="logout">Logout</string>
     <string name="empty">Empty</string>
+    <string name="default_notification_channel_id" translatable="false">anyservice_channel</string>
+    <string name="add">Add</string>
+    <string name="value">Value</string>
+    <string name="default_notification_channel_name">Anyservice Main</string>
 
 </resources>
